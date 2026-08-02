@@ -82,4 +82,4 @@ The bridge runs any command a paired client sends. Pairing needs sight of the co
 
 ## Licenses
 
-The code is under the MIT license. The Geist fonts in `assets/fonts/` come from the official [vercel/geist-font](https://github.com/vercel/geist-font) release, under the SIL Open Font License 1.1 (`assets/fonts/OFL.txt`). This repo contains no Aside code or assets. The app talks to a licensed Aside install on your own machine through its CLI.
+The code is under the MIT license. The sky image in `assets/images/sky.png` was generated for this project and is covered by the same license. The Geist fonts in `assets/fonts/` come from the official [vercel/geist-font](https://github.com/vercel/geist-font) release, under the SIL Open Font License 1.1 (`assets/fonts/OFL.txt`). This repo contains no Aside code or assets. The app talks to a licensed Aside install on your own machine through its CLI.

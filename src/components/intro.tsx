@@ -17,7 +17,7 @@ export function IntroScreen({ onDone }: { onDone: () => void }) {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Image
-        source={require('../../assets/images/aside-clouds.png')}
+        source={require('../../assets/images/sky.png')}
         style={styles.sky}
         contentFit="cover"
         pointerEvents="none"
