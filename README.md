@@ -1,6 +1,6 @@
 # aside-mobile-manager
 
-This repo holds a phone app for [Aside](https://aside.studio) sessions. Aside is a browser agent that runs on a Mac. The app starts and steers Aside sessions from a phone.
+This repo holds a phone app for [Aside](https://aside.studio) sessions. Aside is a browser agent that runs on a Mac. It removed most of my personal admin: it watches my inbox, chases returns, and monitors payments in my own browser. Aside has no mobile app yet, and I could not wait for one. This app starts and steers Aside sessions from my phone.
 
 The system has two parts:
 
