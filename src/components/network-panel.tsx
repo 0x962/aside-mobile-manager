@@ -46,7 +46,11 @@ export function NetworkPanel({
       const online = machines.filter((m) => m.online);
       setFound(online);
       if (!online.some((m) => m.hasBridge))
-        setNotice('No bridge found. Install it on the computer that runs Aside, then scan again.');
+        setNotice(
+          info
+            ? 'No bridge answered. Check that the computer that runs Aside is awake and has the bridge installed.'
+            : 'No bridge answered. Put this phone on the same network as the computer that runs Aside.',
+        );
     } catch (e) {
       setNotice(String(e instanceof Error ? e.message : e).slice(0, 160));
     } finally {

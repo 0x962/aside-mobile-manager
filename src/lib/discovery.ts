@@ -64,13 +64,19 @@ export async function reachableBridge(
  * Ask a bridge who it is. /health needs no token, so a machine gets its real
  * name in the list before the phone has paired with it.
  */
-async function identify(host: string): Promise<{ name: string; overlayIp: string }> {
+async function identify(host: string): Promise<{ name: string; overlayIp: string; reachable: boolean }> {
   const fallback = host.split(':')[0];
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 2500);
   try {
-    const h = await new Bridge(host).health();
-    return { name: h.host || fallback, overlayIp: h.overlayIp ?? '' };
+    const res = await fetch(`http://${host}/health`, { signal: ctrl.signal });
+    const h = await res.json();
+    if (h?.ok !== true) return { name: fallback, overlayIp: '', reachable: false };
+    return { name: h.host || fallback, overlayIp: h.overlayIp ?? '', reachable: true };
   } catch {
-    return { name: fallback, overlayIp: '' };
+    return { name: fallback, overlayIp: '', reachable: false };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -85,6 +91,10 @@ export async function sweepLan(
 ): Promise<(FoundHost & { overlayIp: string })[]> {
   const ip = await Network.getIpAddressAsync().catch(() => null);
   if (!ip || !/^\d+\.\d+\.\d+\.\d+$/.test(ip)) return [];
+  // With a VPN up the phone reports its overlay address. Those live across a
+  // /10, so sweeping this /24 would find nothing; known hosts cover that case.
+  const [a, b] = ip.split('.').map(Number);
+  if (a === 100 && b >= 64 && b <= 127) return [];
   const prefix = ip.split('.').slice(0, 3).join('.');
   const targets = Array.from({ length: 254 }, (_, i) => `${prefix}.${i + 1}`).filter((a) => a !== ip);
 
@@ -151,11 +161,39 @@ export async function scanAll(
   tokens: Record<string, string> = {},
   onProgress?: (done: number, total: number) => void,
 ): Promise<FoundHost[]> {
+  // Known hosts are checked directly, whatever the sweep does: the phone may
+  // sit on another subnet, or reach a machine only over the overlay network.
+  const known = (
+    await Promise.all(
+      [...new Set(seeds)].filter((h) => h && h !== DEMO_HOST).map(async (host) => {
+        const id = await identify(host);
+        return id.reachable
+          ? { name: id.name, overlayIp: id.overlayIp, host, os: '', online: true, hasBridge: true }
+          : null;
+      }),
+    )
+  ).filter(Boolean) as (FoundHost & { overlayIp: string })[];
+
   const lan = await sweepLan(BRIDGE_PORT, onProgress);
-  // Listing the overlay network runs a command, so it needs a paired bridge.
-  // Without one the sweep still stands on its own.
-  const paired = [...lan.map((h) => h.host), ...seeds].filter((h) => tokens[h]);
-  const via = await reachableBridge(paired, tokens);
+
+  // One machine can answer at several addresses. It reports the same overlay
+  // address on each, so that is what collapses them; the overlay address wins
+  // because it keeps working away from this network.
+  const byMachine = new Map<string, FoundHost & { overlayIp: string }>();
+  for (const h of [...known, ...lan]) {
+    const key = h.overlayIp || h.host;
+    const kept = byMachine.get(key);
+    const isOverlayAddress = h.host.split(':')[0] === h.overlayIp;
+    if (!kept || isOverlayAddress) byMachine.set(key, h);
+  }
+  const reachable = [...byMachine.values()];
+
+  // Listing the wider network runs a command, so it needs a paired bridge.
+  // Without one, the machines found above still stand on their own.
+  const via = await reachableBridge(
+    reachable.map((h) => h.host).filter((h) => tokens[h]),
+    tokens,
+  );
   const overlay = via ? await scanOverlay(via).catch(() => []) : [];
 
   // A machine found both ways appears twice under different addresses and
@@ -163,7 +201,9 @@ export async function scanAll(
   const overlayIps = new Set(overlay.map((h) => h.host.split(':')[0]));
   const merged: FoundHost[] = [
     ...overlay,
-    ...lan.filter((h) => !h.overlayIp || !overlayIps.has(h.overlayIp)).map(({ overlayIp, ...h }) => h),
+    ...reachable
+      .filter((h) => !h.overlayIp || !overlayIps.has(h.overlayIp))
+      .map(({ overlayIp, ...h }) => h),
   ];
 
   const byHost = new Map<string, FoundHost>();
