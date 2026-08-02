@@ -6,7 +6,7 @@ import { T } from '@/components/text';
 import { C, F, S } from '@/constants/theme';
 import { Aside } from '@/lib/aside';
 import { DEMO_HOST } from '@/lib/demo';
-import { probe, reachableBridge, scanTailnet } from '@/lib/discovery';
+import { probe, scanAll } from '@/lib/discovery';
 import { useSettings, type BridgeHost } from '@/lib/settings';
 
 type HostRow = BridgeHost & { os?: string; status: 'checking' | 'ok' | 'down' };
@@ -39,16 +39,15 @@ export default function SettingsScreen() {
     setScanning(true);
     setScanError(null);
     try {
-      // The demo bridge would report a fictional tailnet; scan only real hosts.
+      // The demo bridge would report fictional machines; seed with real hosts.
       const seeds = [settings.bridgeHost, ...settings.hosts.map((h) => h.host)].filter(
         (h) => h && h !== DEMO_HOST,
       );
-      const via = await reachableBridge(seeds);
-      if (!via) {
-        setScanError('No known bridge answered; the scan needs one reachable bridge.');
+      const found = await scanAll(seeds);
+      if (!found.length) {
+        setScanError('No bridge found on this network.');
         return;
       }
-      const found = await scanTailnet(via);
       const merged: HostRow[] = found.map((f) => ({
         name: f.name,
         host: f.host,
@@ -142,7 +141,7 @@ export default function SettingsScreen() {
         })}
         {scanError && <T variant="faint" style={{ color: C.error }}>{scanError}</T>}
         <T variant="faint">
-          The scan asks a reachable bridge for machines on the network, then probes port 4720 on each.
+          The scan probes port 4720 across this network, then asks any bridge it reaches for other machines.
         </T>
       </View>
 

@@ -8,7 +8,7 @@
 
 > This is an unofficial, personal project. Aside does not build, support, or endorse it. The app drives a licensed Aside install on your own machine, through its own CLI.
 
-This repo holds a phone app for [Aside](https://aside.studio). Aside is the first "AI browser" I've used that is actually good. I've been able to improve my life by handing off personal and work admin; Amazon returns, tax returns, bill payments, expense reports, visa applications... it is so good I cannot imagine getting through these tasks without Aside anymore. I want Aside on my phone, and I couldn't wait any longer for the team to build one. Naturally, I built one.
+This repo holds a phone app for [Aside](https://aside.com/). Aside is the first "AI browser" I've used that is actually good. I've been able to improve my life by handing off personal and work admin; Amazon returns, tax returns, bill payments, expense reports, visa applications... it is so good I cannot imagine getting through these tasks without Aside anymore. I want Aside on my phone, and I couldn't wait any longer for the team to build one. Naturally, I built one.
 
 The system has two parts:
 
@@ -43,7 +43,7 @@ npx expo start
 Figure out network: 
 Your phone needs to be able to talk to the bridge. You can use a free tailscale account like I do. 
 
-Open the app in Expo Go on the phone. The connect screen scans the network for a bridge and lists the machines it finds. The scan asks a reachable bridge for the machine list, so the app must have reached a bridge at least once before the scan can discover others. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
+Open the app in Expo Go on the phone. The connect screen scans the network for a bridge and lists the machines it finds. The scan probes every address on the phone's own subnet, so it needs nothing to start; any bridge it reaches then reports the machines on the wider network. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
 
 ## Demo mode
 
@@ -51,7 +51,7 @@ The connect screen has one secondary option: Demo. It serves sample sessions fro
 
 ## Security model
 
-The bridge runs any command that reaches it. It binds only to loopback and Tailscale addresses. Access to the tailnet is the whole boundary. Do not expose the port outside the tailnet.
+The bridge runs any command that reaches it. It binds loopback, the Tailscale range, and private LAN ranges. Network access is the whole boundary: anyone on those networks can run commands on the machine. Run the bridge only on networks you trust, and never expose port 4720 to the internet.
 
 ## Licenses
 

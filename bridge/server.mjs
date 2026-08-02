@@ -1,5 +1,7 @@
-// minibridge: run commands on this machine from apps on the tailnet.
-// HTTP for control, WebSocket for process I/O. No auth: the tailnet is the boundary.
+// minibridge: run commands on this machine from apps on the local network.
+// HTTP for control, WebSocket for process I/O. No auth: network membership is
+// the boundary — loopback, the CGNAT overlay range, and private LAN ranges.
+// Anyone on those networks can run commands here; keep them trusted.
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -15,15 +17,22 @@ const MAX_BUFFER = 4 * 1024 * 1024; // per-process scrollback kept for late-join
 const KEEP_EXITED_MS = 60 * 60 * 1000;
 const RUN_TIMEOUT_MS = 120 * 1000;
 
+function bindable(octets) {
+  const [a, b] = octets;
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT overlay (Tailscale)
+  if (a === 10) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  return false;
+}
+
 function listenHosts() {
   if (process.env.MINIBRIDGE_HOSTS) return process.env.MINIBRIDGE_HOSTS.split(',');
   const hosts = ['127.0.0.1'];
-  // Tailscale assigns addresses from the CGNAT range 100.64.0.0/10.
   for (const addrs of Object.values(os.networkInterfaces())) {
     for (const a of addrs ?? []) {
       if (a.family !== 'IPv4') continue;
-      const octets = a.address.split('.').map(Number);
-      if (octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127) hosts.push(a.address);
+      if (bindable(a.address.split('.').map(Number))) hosts.push(a.address);
     }
   }
   return hosts;

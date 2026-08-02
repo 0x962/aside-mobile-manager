@@ -12,6 +12,7 @@ export type Settings = {
   asideBin: string;
   asideHome: string;
   account: number;
+  introSeen: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -27,6 +28,7 @@ export const DEFAULT_SETTINGS: Settings = {
   asideBin: '',
   asideHome: '',
   account: 0,
+  introSeen: false,
 };
 
 const KEY = 'settings.v1';

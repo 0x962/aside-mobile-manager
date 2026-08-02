@@ -1,6 +1,6 @@
 # minibridge
 
-minibridge runs commands on this machine for apps on the tailnet. The client holds the business logic. The bridge runs argv arrays and streams I/O. There is no auth: access to the tailnet is the boundary. The server binds only to loopback and the Tailscale IPs.
+minibridge runs commands on this machine for apps on the local network. The client holds the business logic. The bridge runs argv arrays and streams I/O. There is no auth: network access is the boundary. The server binds loopback, the Tailscale range (100.64.0.0/10), and private LAN ranges (10/8, 192.168/16, 172.16/12). Anyone on those networks can run commands here, so run it only on networks you trust.
 
 ## Install
 

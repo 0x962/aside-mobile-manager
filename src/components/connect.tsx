@@ -7,42 +7,39 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T } from '@/components/text';
 import { C, S } from '@/constants/theme';
 import { DEMO_HOST } from '@/lib/demo';
-import { reachableBridge, scanTailnet, tailnetInfo, type TailnetHost, type TailnetInfo } from '@/lib/discovery';
+import { overlayInfo, scanAll, type FoundHost, type NetworkInfo } from '@/lib/discovery';
 import { useSettings } from '@/lib/settings';
 
 // The screen shown while no bridge host is configured: on first launch and
-// after leaving demo mode. The machine listing comes from a bridge, so the
-// scan probes known hosts first; with none reachable it can only report why.
+// after leaving demo mode. The scan sweeps this phone's own subnet, which
+// needs no prior knowledge, and any bridge it reaches also reports the
+// machines on the wider network.
 export function ConnectScreen() {
   const { settings, update } = useSettings();
   const insets = useSafeAreaInsets();
   const [scanning, setScanning] = useState(true);
-  const [found, setFound] = useState<TailnetHost[]>([]);
-  const [net, setNet] = useState<TailnetInfo | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [found, setFound] = useState<FoundHost[]>([]);
+  const [net, setNet] = useState<NetworkInfo | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const scan = useCallback(async () => {
     setScanning(true);
+    setProgress(0);
     setNotice(null);
     try {
-      const [info, via] = await Promise.all([
-        tailnetInfo(),
-        reachableBridge(settings.hosts.map((h) => h.host)),
+      const [info, machines] = await Promise.all([
+        overlayInfo(),
+        scanAll(
+          settings.hosts.map((h) => h.host),
+          (done, total) => setProgress(done / total),
+        ),
       ]);
       setNet(info);
-      if (!via) {
-        setFound([]);
-        setNotice(
-          info
-            ? 'No bridge answered. Install the bridge on the machine that runs Aside, then scan again.'
-            : 'This phone is not on the network. Join the same network as your machine, then scan again.',
-        );
-        return;
-      }
-      const machines = (await scanTailnet(via)).filter((m) => m.online);
-      setFound(machines);
-      if (!machines.some((m) => m.hasBridge))
-        setNotice('No bridge found on the network. Install it on the machine that runs Aside.');
+      const online = machines.filter((m) => m.online);
+      setFound(online);
+      if (!online.some((m) => m.hasBridge))
+        setNotice('No bridge found. Install it on the computer that runs Aside, then scan again.');
     } catch (e) {
       setNotice(String(e instanceof Error ? e.message : e).slice(0, 160));
     } finally {
@@ -84,7 +81,7 @@ export function ConnectScreen() {
         </View>
 
         <View style={styles.section}>
-          <ScanButton scanning={scanning} onPress={scan} />
+          <ScanButton scanning={scanning} progress={progress} onPress={scan} />
           {found.map((m) => (
             <Pressable
               key={m.host}
@@ -106,7 +103,7 @@ export function ConnectScreen() {
           {notice && <T variant="faint">{notice}</T>}
           {net && (
             <T variant="faint" style={{ textAlign: 'center' }}>
-              This phone is {net.deviceName ? `${net.deviceName} ` : ''}on {net.tailnet}.
+              This phone is {net.deviceName ? `${net.deviceName} ` : ''}on {net.name}.
             </T>
           )}
         </View>
@@ -126,7 +123,15 @@ export function ConnectScreen() {
 
 // The scan button keeps its size and place through every state; while a scan
 // runs, a light band sweeps across it and the spinner replaces the icon.
-function ScanButton({ scanning, onPress }: { scanning: boolean; onPress: () => void }) {
+function ScanButton({
+  scanning,
+  progress,
+  onPress,
+}: {
+  scanning: boolean;
+  progress: number;
+  onPress: () => void;
+}) {
   const sweep = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -170,7 +175,7 @@ function ScanButton({ scanning, onPress }: { scanning: boolean; onPress: () => v
         <Ionicons name="search-outline" size={16} color={C.inverseInk} />
       )}
       <T variant="heading" style={{ color: C.inverseInk }}>
-        {scanning ? 'Scanning network…' : 'Scan network'}
+        {scanning ? `Scanning network… ${Math.round(progress * 100)}%` : 'Scan network'}
       </T>
     </Pressable>
   );

@@ -5,6 +5,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConnectScreen } from '@/components/connect';
+import { IntroScreen } from '@/components/intro';
 import { Avatar, ProfileMenu } from '@/components/profile-menu';
 import { T } from '@/components/text';
 import { C, F, prettyModel, S } from '@/constants/theme';
@@ -82,6 +83,7 @@ export default function SessionsScreen() {
 
   const hostName = settings.hosts.find((h) => h.host === settings.bridgeHost)?.name ?? settings.bridgeHost;
 
+  if (!settings.introSeen) return <IntroScreen onDone={() => update({ introSeen: true })} />;
   if (!configured) return <ConnectScreen />;
 
   return (
