@@ -21,7 +21,8 @@
       "autoIncrement": true,
       "ios": {
         "resourceClass": "m-medium"
-      }
+      },
+      "credentialsSource": "local"
     }
   },
   "submit": {
