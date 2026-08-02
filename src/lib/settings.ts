@@ -16,7 +16,14 @@ export type Settings = {
 
 export const DEFAULT_SETTINGS: Settings = {
   bridgeHost: '',
-  hosts: [],
+  // The scan needs one reachable bridge as its way into the network, so dev
+  // builds seed the developer's machines. Release builds start empty.
+  hosts: __DEV__
+    ? [
+        { name: 'Mac mini', host: '100.74.122.84:4720' },
+        { name: 'Canary laptop', host: '100.88.168.85:4720' },
+      ]
+    : [],
   asideBin: '',
   asideHome: '',
   account: 0,
@@ -24,11 +31,22 @@ export const DEFAULT_SETTINGS: Settings = {
 
 const KEY = 'settings.v1';
 
+// The demo is a mode, not a host, and the second row is the fictional machine
+// the demo bridge reported to scans in older builds.
+const BOGUS_HOSTS = new Set([DEMO_HOST, '100.101.102.103:4720']);
+
 export async function loadSettings(): Promise<Settings> {
   const raw = await AsyncStorage.getItem(KEY);
   const s: Settings = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
-  // The demo is a mode, not a host; drop rows older builds may have saved.
-  s.hosts = (s.hosts ?? []).filter((h) => h.host !== DEMO_HOST);
+  s.hosts = (s.hosts ?? []).filter((h) => !BOGUS_HOSTS.has(h.host));
+  // Scan seeds must survive resets and upgrades: keep the active host listed,
+  // and always fold the defaults back in.
+  if (s.bridgeHost && s.bridgeHost !== DEMO_HOST && !s.hosts.some((h) => h.host === s.bridgeHost)) {
+    s.hosts = [{ name: s.bridgeHost.split(':')[0], host: s.bridgeHost }, ...s.hosts];
+  }
+  for (const d of DEFAULT_SETTINGS.hosts) {
+    if (!s.hosts.some((h) => h.host === d.host)) s.hosts.push(d);
+  }
   return s;
 }
 
