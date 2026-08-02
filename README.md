@@ -1,10 +1,18 @@
 # Aside Mobile App
 
+![Unofficial](https://img.shields.io/badge/status-unofficial-orange)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue)
+![Expo SDK 54](https://img.shields.io/badge/Expo-SDK%2054-000020?logo=expo&logoColor=white)
+![Platform: iOS](https://img.shields.io/badge/platform-iOS-lightgrey?logo=apple)
+![Runs over Tailscale](https://img.shields.io/badge/network-Tailscale-4B5563)
+
+> This is an unofficial, personal project. Aside does not build, support, or endorse it. The app drives a licensed Aside install on your own machine, through its own CLI.
+
 This repo holds a phone app for [Aside](https://aside.studio). Aside is the first "AI browser" I've used that is actually good. I've been able to improve my life by handing off personal and work admin; Amazon returns, tax returns, bill payments, expense reports, visa applications... it is so good I cannot imagine getting through these tasks without Aside anymore. I want Aside on my phone, and I couldn't wait any longer for the team to build one. Naturally, I built one.
 
 The system has two parts:
 
-- `bridge/` holds minibridge. This is a small Node service meant to run next to your Aisde browser. It accepts commands over a Tailscale network and runs them. It has no other logic.
+- `bridge/` holds minibridge. This is a small Node service meant to run next to your Aside browser. It accepts commands over a Tailscale network and runs them. It has no other logic.
 - The Expo app in this repo runs on the phone. The app holds all product logic. It composes `aside` CLI commands and sends them through the bridge.
 
 ## How it works
