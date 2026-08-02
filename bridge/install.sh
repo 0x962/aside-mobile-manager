@@ -108,6 +108,18 @@ chmod +x "$DIR/pair.sh" 2>/dev/null || true
 # 4. The launchd agent, then pairing.
 # ---------------------------------------------------------------------------
 
+# Homebrew installs the same service under its own label. Two agents on one
+# port means the second fails to bind, with a launchd error that explains
+# nothing.
+if [[ "$LOAD_AGENT" == true && -f "$HOME/Library/LaunchAgents/homebrew.mxcl.minibridge.plist" ]]; then
+  say "Homebrew already manages minibridge on this machine."
+  echo "Use it instead of a second agent:"
+  echo "  brew services restart minibridge"
+  echo "Or remove the Homebrew service first:"
+  echo "  brew services stop minibridge && brew uninstall minibridge"
+  LOAD_AGENT=false
+fi
+
 if [[ "$LOAD_AGENT" == true ]]; then
   AGENTS="$HOME/Library/LaunchAgents"
   mkdir -p "$AGENTS" "$HOME/Library/Logs"

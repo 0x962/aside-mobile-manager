@@ -32,6 +32,15 @@ curl -fsSL https://raw.githubusercontent.com/0x962/aside-mobile-manager/main/bri
 
 The script installs the latest release to `~/.minibridge/bridge`, loads a launchd agent (`co.nvdk.minibridge`) that starts the bridge at login and restarts it if it dies, then shows a pairing code. Logs go to `~/Library/Logs/minibridge.log`.
 
+Use one installer, not both. Each registers its own launchd agent on port 4720,
+and the second one to start cannot bind. If Homebrew now manages the bridge and
+an older curl install left an agent behind, remove it:
+
+```
+launchctl bootout gui/$(id -u)/co.nvdk.minibridge
+rm ~/Library/LaunchAgents/co.nvdk.minibridge.plist
+```
+
 Node 20 or newer is required. An existing install is used when it qualifies; otherwise the script puts a private copy in `~/.minibridge/node` and touches nothing else.
 
 Add `--with-aside` to keep Aside.app running at login too. Add `--no-agent` to install the files without loading the agent. Set `MINIBRIDGE_VERSION` to pin a release, or `MINIBRIDGE_BRANCH=main` to track the branch.
