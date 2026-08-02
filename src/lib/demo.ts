@@ -54,21 +54,21 @@ function seedSessions(): DemoSession[] {
   return [
     {
       id: 'demo-refund',
-      title: 'Chase the Arket refund',
+      title: 'Chase the Northline refund',
       status: 'idle',
       model: { ...FABLE, thinkingLevel: 'high' },
       ephemeral: false,
       createdAt: now - 13 * DAY,
       updatedAt: now - 2 * HOUR,
       messages: [
-        user("Any movement on the Arket refund? It's been two weeks.", now - 2 * HOUR - 6 * 60000),
+        user("Any movement on the Northline refund? It's been two weeks.", now - 2 * HOUR - 6 * 60000),
         assistant(
           think('The return shipped on the 14th. Check the inbox for a warehouse confirmation first, then the order page.'),
-          tool('t1', 'gmail', 'Search inbox for "Arket"', { query: 'from:arket newer_than:14d' }),
+          tool('t1', 'mail', 'Search inbox for "Northline"', { query: 'from:northline newer_than:14d' }),
         ),
         toolResult('t1', '3 messages. Latest: "Your return has been received" (Jul 28).', 2100),
         assistant(
-          tool('t2', 'browser', 'Open the Arket order page', { url: 'https://www.arket.com/account/orders/48812' }),
+          tool('t2', 'browser', 'Open the Northline order page', { url: 'https://shop.example.com/orders/48812' }),
         ),
         toolResult('t2', 'Order 48812 · Return received · Refund: pending', 5400),
         assistant(
@@ -80,8 +80,8 @@ function seedSessions(): DemoSession[] {
           ),
         ),
         user('Send it.', now - 2 * HOUR),
-        assistant(tool('t3', 'gmail', 'Send the draft to Arket support', { draftId: 'r-8812' })),
-        toolResult('t3', 'Sent to customerservice@arket.com.', 1200),
+        assistant(tool('t3', 'mail', 'Send the draft to Northline support', { draftId: 'r-8812' })),
+        toolResult('t3', 'Sent to support@northline.example.', 1200),
         assistant(say('Sent. I will check the order page again on Friday and flag any refund email sooner.')),
       ],
     },
@@ -97,7 +97,7 @@ function seedSessions(): DemoSession[] {
         user('Anything in the inbox this morning that needs me?', now - 32 * 60000),
         assistant(
           think('Scan unread from the last 12 hours, split what needs a reply from noise.'),
-          tool('t1', 'gmail', 'List unread from the last 12 hours', { query: 'is:unread newer_than:12h' }),
+          tool('t1', 'mail', 'List unread from the last 12 hours', { query: 'is:unread newer_than:12h' }),
         ),
         toolResult('t1', '9 unread. 2 personal, 1 billing, 6 promotions.', 1900),
         assistant(
@@ -219,26 +219,26 @@ function respond(text: string): DemoReply {
     return {
       steps: [
         { think: 'One browser window, four tabs. Read each one, then group by what needs action.' },
-        t$('browser', 'List open tabs', { action: 'tabs.list' }, '4 tabs: Gmail, Amazon order 112-99, Google Flights BOS→SFO, HN thread', 1800),
-        t$('browser', 'Read the Gmail tab', { action: 'tab.read', tab: 1 }, '2 unread; one from the accountant about Q2 invoices.', 2600),
+        t$('browser', 'List open tabs', { action: 'tabs.list' }, '4 tabs: mail, a store order, a flight tracker, a forum thread', 1800),
+        t$('browser', 'Read the mail tab', { action: 'tab.read', tab: 1 }, '2 unread; one from the accountant about Q2 invoices.', 2600),
         t$('browser', 'Read the Flights tab', { action: 'tab.read', tab: 3 }, 'BOS→SFO Sep 12, tracked fare currently $214.', 2100),
         { think: 'Nothing here is urgent; the accountant email matters most.' },
       ],
       reply:
         'Four tabs are open:\n\n' +
-        '- **Gmail** – two unread, one from the accountant.\n' +
-        '- **Amazon** – order 112-99 arrives tomorrow.\n' +
-        '- **Google Flights** – BOS→SFO Sep 12, tracked fare at $214.\n' +
-        '- **Hacker News** – a thread on local-first software.\n\n' +
+        '- **Mail** – two unread, one from the accountant.\n' +
+        '- **A store order** – arrives tomorrow.\n' +
+        '- **A flight tracker** – BOS to SFO Sep 12, fare at $214.\n' +
+        '- **A forum thread** – on local-first software.\n\n' +
         '*Demo data. Connect a machine that runs Aside to see your real tabs.*',
     };
   if (t.includes('inbox') || t.includes('email') || t.includes('mail'))
     return {
       steps: [
         { think: 'Scan unread from the last day, split what needs a reply from noise.' },
-        t$('gmail', 'Search unread mail', { query: 'is:unread newer_than:1d' }, '6 unread. 1 needs a reply, 1 billing, 4 promotions.', 2400),
-        t$('gmail', 'Read the landlord thread', { threadId: 'th-1182' }, 'Boiler visit Thursday 9–11am. Wants a yes/no.', 1900),
-        t$('gmail', 'Archive the promotions', { count: 4 }, 'Archived 4 messages.', 900),
+        t$('mail', 'Search unread mail', { query: 'is:unread newer_than:1d' }, '6 unread. 1 needs a reply, 1 billing, 4 promotions.', 2400),
+        t$('mail', 'Read the landlord thread', { threadId: 'th-1182' }, 'Boiler visit Thursday 9–11am. Wants a yes/no.', 1900),
+        t$('mail', 'Archive the promotions', { count: 4 }, 'Archived 4 messages.', 900),
         { think: 'Only the landlord thread needs an answer; the bill is the usual direct debit.' },
       ],
       reply:
@@ -248,8 +248,8 @@ function respond(text: string): DemoReply {
     return {
       steps: [
         { think: 'Check the inbox for a refund confirmation first, then the order page.' },
-        t$('gmail', 'Search for a refund confirmation', { query: 'from:arket refund' }, 'No refund email yet.', 1600),
-        t$('browser', 'Check the order page', { url: 'https://www.arket.com/account/orders/48812' }, 'Order 48812 · Refund: pending · deadline Aug 11', 4800),
+        t$('mail', 'Search for a refund confirmation', { query: 'from:northline refund' }, 'No refund email yet.', 1600),
+        t$('browser', 'Check the order page', { url: 'https://shop.example.com/orders/48812' }, 'Order 48812 · Refund: pending · deadline Aug 11', 4800),
         { think: 'Still pending, and the nudge already went out earlier today. Nothing more to send.' },
       ],
       reply:
@@ -265,7 +265,7 @@ function respond(text: string): DemoReply {
       reply:
         'Today:\n\n' +
         '- **Morning inbox sweep** – two items need you: the accountant (Q2 invoices by Friday) and the landlord (boiler visit yes/no).\n' +
-        '- **Chase the Arket refund** – nudge email sent, payout deadline Aug 11.\n\n' +
+        '- **Chase the Northline refund** – nudge email sent, payout deadline Aug 11.\n\n' +
         'Earlier this week the dentist move and the gym cancellation both completed.\n\n*Demo data.*',
     };
   return {

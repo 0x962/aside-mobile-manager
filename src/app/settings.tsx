@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { ComputerList, PairingFlow } from '@/components/computer-list';
+import { LegalSection } from '@/components/legal';
 import { T } from '@/components/text';
 import { C, F, S } from '@/constants/theme';
 import { Aside } from '@/lib/aside';
@@ -49,7 +50,11 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <T variant="label">Computer</T>
-        <ComputerList onPair={() => setPairing(true)} onConnected={() => router.back()} />
+        <ComputerList
+          onPair={() => setPairing(true)}
+          onConnected={() => router.back()}
+          onForget={forget}
+        />
       </View>
 
       {settings.bridgeHost === DEMO_HOST && (
@@ -61,25 +66,10 @@ export default function SettingsScreen() {
       )}
 
       {settings.computers.length > 0 && (
-        <View style={styles.section}>
-          <T variant="label">Paired computers</T>
-          {settings.computers.map((c) => (
-            <View key={c.name} style={styles.row}>
-              <Ionicons name="lock-closed-outline" size={14} color={C.inkSecondary} />
-              <View style={{ flex: 1 }}>
-                <T variant="body">{c.name}</T>
-                <T variant="faint">{c.addresses.join(' · ')}</T>
-              </View>
-              <Pressable onPress={() => forget(c.name)} hitSlop={10}>
-                <T variant="label" style={{ color: C.error }}>Forget</T>
-              </Pressable>
-            </View>
-          ))}
-          <T variant="faint">
-            Forget drops the key from this phone. To revoke this phone on the computer, delete its
-            entry in ~/.minibridge/state.json there.
-          </T>
-        </View>
+        <T variant="faint">
+          Forget drops the key from this phone. To revoke this phone on the computer, delete its
+          entry in ~/.minibridge/state.json there.
+        </T>
       )}
 
       <Field
@@ -103,6 +93,8 @@ export default function SettingsScreen() {
       <Pressable onPress={() => update({ introSeen: false })} style={styles.link}>
         <T variant="label" style={{ color: C.inkSecondary }}>Show the introduction again</T>
       </Pressable>
+
+      <LegalSection />
     </ScrollView>
   );
 }

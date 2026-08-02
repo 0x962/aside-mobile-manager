@@ -7,6 +7,7 @@ import { T } from '@/components/text';
 import { C, S } from '@/constants/theme';
 import { Bridge } from '@/lib/bridge';
 import { firstReachable } from '@/lib/discovery';
+import { PAIR_AGAIN } from '@/lib/links';
 
 type Stage = 'scanning' | 'checking' | 'failed';
 
@@ -106,7 +107,7 @@ export function PairingScreen({
         </View>
 
         <View style={styles.steps}>
-          <Step n="1" text="On the computer, run: npm run pair" />
+          <Step n="1" text={`On the computer, run: ${PAIR_AGAIN}`} />
           <Step n="2" text="Point this phone at the code on its screen." />
           <Step n="3" text="The code expires after 3 minutes." />
         </View>

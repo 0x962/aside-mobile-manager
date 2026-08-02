@@ -2,50 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CommandBlock, ExternalLink, LegalBrief } from '@/components/legal';
 import { T } from '@/components/text';
 import { C, S } from '@/constants/theme';
-
-export const ASIDE_URL = 'https://aside.com/';
-
-type Page = {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  body: string;
-  points: { icon: keyof typeof Ionicons.glyphMap; text: string }[];
-  link?: { label: string; url: string };
-};
-
-const PAGES: Page[] = [
-  {
-    icon: 'phone-portrait-outline',
-    title: 'A phone remote for Aside',
-    body: 'Aside is an agent that works in a browser on your computer, with your own logins and tabs. This app is a thin mobile interface for it: open source and free.',
-    points: [
-      { icon: 'list-outline', text: 'Read every session and transcript.' },
-      { icon: 'send-outline', text: 'Start a session, or reply to one.' },
-      { icon: 'eye-outline', text: 'Watch a turn as it works.' },
-    ],
-    link: { label: 'Install Aside to get started', url: ASIDE_URL },
-  },
-  {
-    icon: 'git-network-outline',
-    title: 'Control Aside remotely',
-    body: 'Your computer runs a small service called the bridge. This app sends commands to it over your own network. Nothing passes through a server of ours.',
-    points: [
-      { icon: 'download-outline', text: 'Install the bridge on the computer that runs Aside.' },
-      { icon: 'wifi-outline', text: 'Keep both devices on the same network.' },
-      { icon: 'search-outline', text: 'Scan finds the bridge and connects.' },
-    ],
-  },
-];
+import { ASIDE_URL, BREW_INSTALL, BREW_START } from '@/lib/links';
 
 export function IntroScreen({ onDone }: { onDone: () => void }) {
   const insets = useSafeAreaInsets();
   const [page, setPage] = useState(0);
-  const p = PAGES[page];
-  const last = page === PAGES.length - 1;
+  const last = page === 1;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -60,45 +27,69 @@ export function IntroScreen({ onDone }: { onDone: () => void }) {
         style={styles.skyFade}
         pointerEvents="none"
       />
-      <View style={[styles.body, { paddingBottom: insets.bottom + S.lg }]}>
-        <View style={styles.hero}>
-          <View style={styles.heroIcon}>
-            <Ionicons name={p.icon} size={26} color={C.ink} />
-          </View>
-          <T variant="title" style={{ textAlign: 'center' }}>{p.title}</T>
-          <T variant="secondary" style={{ textAlign: 'center' }}>{p.body}</T>
-        </View>
 
-        <View style={styles.points}>
-          {p.points.map((point) => (
-            <View key={point.text} style={styles.point}>
-              <Ionicons name={point.icon} size={16} color={C.inkSecondary} />
-              <T variant="body" style={{ flex: 1 }}>{point.text}</T>
-            </View>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}>
+        {page === 0 ? <WhatItIs /> : <HowItWorks />}
+      </ScrollView>
+
+      <View style={[styles.footer, { paddingBottom: insets.bottom + S.lg }]}>
+        <View style={styles.dots}>
+          {[0, 1].map((i) => (
+            <View key={i} style={[styles.dot, i === page && styles.dotActive]} />
           ))}
-          {p.link && (
-            <Pressable onPress={() => Linking.openURL(p.link!.url)} style={styles.link}>
-              <Ionicons name="open-outline" size={15} color={C.ink} />
-              <T variant="label" style={{ color: C.ink, flex: 1 }}>{p.link.label}</T>
-              <T variant="faint">aside.com</T>
-            </Pressable>
-          )}
         </View>
-
-        <View style={styles.footer}>
-          <View style={styles.dots}>
-            {PAGES.map((_, i) => (
-              <View key={i} style={[styles.dot, i === page && styles.dotActive]} />
-            ))}
-          </View>
-          <Pressable
-            onPress={() => (last ? onDone() : setPage(page + 1))}
-            style={({ pressed }) => [styles.button, pressed && { transform: [{ scale: 0.98 }] }]}>
-            <T variant="heading" style={{ color: C.inverseInk }}>{last ? 'Get started' : 'Next'}</T>
-            <Ionicons name="arrow-forward" size={16} color={C.inverseInk} />
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={() => (last ? onDone() : setPage(1))}
+          style={({ pressed }) => [styles.button, pressed && { transform: [{ scale: 0.98 }] }]}>
+          <T variant="heading" style={{ color: C.inverseInk }}>
+            {last ? 'Continue' : 'Next'}
+          </T>
+          <Ionicons name="arrow-forward" size={16} color={C.inverseInk} />
+        </Pressable>
       </View>
+    </View>
+  );
+}
+
+function WhatItIs() {
+  return (
+    <View style={styles.page}>
+      <View style={styles.hero}>
+        <View style={styles.heroIcon}>
+          <Ionicons name="phone-portrait-outline" size={26} color={C.ink} />
+        </View>
+        <T variant="title" style={{ textAlign: 'center' }}>A mobile client for Aside</T>
+        <T variant="secondary" style={{ textAlign: 'center' }}>
+          Aside is an AI browser that works on your computer, with your own logins and tabs. This
+          app is a free, open source, unofficial client for it.
+        </T>
+      </View>
+      <ExternalLink label="Learn about Aside" detail="aside.com" url={ASIDE_URL} icon="globe-outline" />
+      <LegalBrief />
+    </View>
+  );
+}
+
+function HowItWorks() {
+  return (
+    <View style={styles.page}>
+      <View style={styles.hero}>
+        <View style={styles.heroIcon}>
+          <Ionicons name="git-network-outline" size={26} color={C.ink} />
+        </View>
+        <T variant="title" style={{ textAlign: 'center' }}>Continue sessions on your phone</T>
+        <T variant="secondary" style={{ textAlign: 'center' }}>
+          Your phone reaches Aside through a small bridge, installed on the computer that runs
+          Aside. Run these two commands there:
+        </T>
+      </View>
+      <CommandBlock lines={[BREW_INSTALL, BREW_START]} />
+      <T variant="faint" style={{ textAlign: 'center' }}>
+        A pairing code opens on that computer. Scan it on the next screen and you are set.
+      </T>
     </View>
   );
 }
@@ -107,7 +98,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   sky: { position: 'absolute', top: 0, left: 0, right: 0, height: 300, opacity: 0.5 },
   skyFade: { position: 'absolute', top: 0, left: 0, right: 0, height: 320 },
-  body: { flex: 1, paddingHorizontal: S.xl, justifyContent: 'center', gap: S.xxl },
+  // No vertical centring: a ScrollView clips the top of content taller than the
+  // screen when it centres, and the legal notice makes the first page tall.
+  body: { flexGrow: 1, paddingHorizontal: S.xl, paddingTop: S.xxl, paddingBottom: S.xl },
+  page: { gap: S.xl },
   hero: { alignItems: 'center', gap: S.sm },
   heroIcon: {
     width: 64,
@@ -120,28 +114,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: S.sm,
   },
-  points: { gap: S.md },
-  point: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: S.md,
-    backgroundColor: C.surface,
-    borderRadius: S.radiusSm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    padding: S.md,
-  },
-  link: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: S.md,
-    backgroundColor: C.surfaceRaised,
-    borderRadius: S.radiusSm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.borderStrong,
-    padding: S.md,
-  },
-  footer: { gap: S.lg, marginTop: 'auto' },
+  footer: { gap: S.lg, paddingHorizontal: S.xl, paddingTop: S.md },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.inkFaint, opacity: 0.5 },
   dotActive: { backgroundColor: C.ink, opacity: 1 },

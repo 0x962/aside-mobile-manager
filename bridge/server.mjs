@@ -78,7 +78,12 @@ const pending = new Map(); // token -> { expiresAt, qrPath }
 
 function saveTokens() {
   fs.mkdirSync(STATE_DIR, { recursive: true });
-  fs.writeFileSync(STATE_FILE, JSON.stringify({ tokens }, null, 2), { mode: 0o600 });
+  let rest = {};
+  try {
+    const { tokens: _old, ...others } = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    rest = others;
+  } catch {}
+  fs.writeFileSync(STATE_FILE, JSON.stringify({ ...rest, tokens }, null, 2), { mode: 0o600 });
 }
 
 function tokenOf(req, url) {
@@ -345,4 +350,22 @@ for (const host of listenHosts()) {
   const server = http.createServer(handle);
   server.on('upgrade', upgrade);
   server.listen(PORT, host, () => console.log(`minibridge listening on ${host}:${PORT}`));
+}
+
+// A bridge nobody has paired with is useless, so show a code as soon as it
+// starts. Once a device is paired this never fires again, and the timestamp
+// keeps a crash-restart loop from reopening the image again and again.
+const AUTO_PAIR_GAP_MS = 10 * 60 * 1000;
+if (!tokens.length) {
+  let last = 0;
+  try {
+    last = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')).lastAutoPairAt ?? 0;
+  } catch {}
+  if (Date.now() - last > AUTO_PAIR_GAP_MS) {
+    fs.mkdirSync(STATE_DIR, { recursive: true });
+    fs.writeFileSync(STATE_FILE, JSON.stringify({ tokens, lastAutoPairAt: Date.now() }, null, 2), {
+      mode: 0o600,
+    });
+    startPairing('first run').catch((err) => console.error(`pairing failed: ${err.message}`));
+  }
 }

@@ -5,6 +5,7 @@ import { PairingScreen } from '@/components/pairing';
 import { T } from '@/components/text';
 import { C, S } from '@/constants/theme';
 import { firstReachable } from '@/lib/discovery';
+import { PAIR_AGAIN } from '@/lib/links';
 import { useSettings, withPairing, type Computer } from '@/lib/settings';
 
 /**
@@ -16,9 +17,12 @@ import { useSettings, withPairing, type Computer } from '@/lib/settings';
 export function ComputerList({
   onPair,
   onConnected,
+  onForget,
 }: {
   onPair: () => void;
   onConnected?: () => void;
+  // Settings offers Forget on each row; the connect screen does not.
+  onForget?: (name: string) => void;
 }) {
   const { settings, update } = useSettings();
   const [connecting, setConnecting] = useState<string | null>(null);
@@ -51,15 +55,24 @@ export function ComputerList({
             <View style={{ flex: 1 }}>
               <T variant="body">{computer.name}</T>
               <T variant="faint">
-                {active ? settings.bridgeHost : `${computer.addresses.length} addresses`}
+                {active ? `connected · ${settings.bridgeHost}` : 'tap to switch'}
               </T>
             </View>
             {connecting === computer.name ? (
               <ActivityIndicator size="small" color={C.inkSecondary} />
-            ) : active ? (
-              <Ionicons name="checkmark" size={17} color={C.ink} />
             ) : (
-              <Ionicons name="chevron-forward" size={15} color={C.inkFaint} />
+              <>
+                {onForget && (
+                  <Pressable onPress={() => onForget(computer.name)} hitSlop={10}>
+                    <T variant="label" style={{ color: C.error }}>Forget</T>
+                  </Pressable>
+                )}
+                {active ? (
+                  <Ionicons name="checkmark" size={17} color={C.ink} />
+                ) : (
+                  <Ionicons name="swap-horizontal" size={16} color={C.inkFaint} />
+                )}
+              </>
             )}
           </Pressable>
         );
@@ -75,7 +88,7 @@ export function ComputerList({
         </T>
       </Pressable>
       <T variant="faint" style={{ textAlign: 'center' }}>
-        Run {'`npm run pair`'} on the computer to show its code.
+        The computer shows a code when the bridge starts. Run {PAIR_AGAIN} to show it again.
       </T>
     </View>
   );

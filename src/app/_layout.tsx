@@ -11,7 +11,9 @@ import { C } from '@/constants/theme';
 import { DEMO_HOST } from '@/lib/demo';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, SettingsContext, type Settings } from '@/lib/settings';
 
-SplashScreen.preventAutoHideAsync();
+// Expo Go supplies its own splash and rejects these calls; the app still
+// controls when its first screen appears, so the rejection is nothing to act on.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const theme = {
   ...DarkTheme,
@@ -46,7 +48,7 @@ export default function RootLayout() {
   );
 
   useEffect(() => {
-    if (fontsLoaded && settings) SplashScreen.hideAsync();
+    if (fontsLoaded && settings) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded, settings]);
 
   if (!fontsLoaded || !settings) return null;
