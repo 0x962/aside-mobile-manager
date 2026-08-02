@@ -17,7 +17,7 @@ import { useSettings } from '@/lib/settings';
 export function ConnectScreen() {
   const { update } = useSettings();
   const insets = useSafeAreaInsets();
-  const [pairing, setPairing] = useState<{ host: string; name: string } | null>(null);
+  const [pairing, setPairing] = useState<{ host?: string; name: string } | null>(null);
 
   if (pairing) return <PairingFlow target={pairing} onClose={() => setPairing(null)} />;
 

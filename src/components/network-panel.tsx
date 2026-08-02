@@ -19,7 +19,7 @@ export function NetworkPanel({
   onPair,
   onConnected,
 }: {
-  onPair: (target: { host: string; name: string }) => void;
+  onPair: (target: { host?: string; name: string }) => void;
   onConnected?: () => void;
 }) {
   const { settings, update } = useSettings();
@@ -101,6 +101,14 @@ export function NetworkPanel({
         );
       })}
       {notice && <T variant="faint">{notice}</T>}
+      <Pressable onPress={() => onPair({ name: 'your computer' })} style={styles.codeRow}>
+        <Ionicons name="qr-code-outline" size={16} color={C.inkSecondary} />
+        <View style={{ flex: 1 }}>
+          <T variant="body">Scan a pairing code</T>
+          <T variant="faint">Run npm run pair on the computer, then scan.</T>
+        </View>
+        <Ionicons name="chevron-forward" size={15} color={C.inkFaint} />
+      </Pressable>
       {net && (
         <T variant="faint" style={{ textAlign: 'center' }}>
           This phone is {net.deviceName ? `${net.deviceName} ` : ''}on {net.name}.
@@ -174,7 +182,8 @@ export function PairingFlow({
   target,
   onClose,
 }: {
-  target: { host: string; name: string };
+  // A target without a host is a cold scan: the code names the computer.
+  target: { host?: string; name: string };
   onClose: () => void;
 }) {
   const { settings, update } = useSettings();
@@ -183,12 +192,12 @@ export function PairingFlow({
       host={target.host}
       name={target.name}
       onCancel={onClose}
-      onPaired={(token) => {
-        const rest = settings.hosts.filter((h) => h.host !== target.host);
+      onPaired={(token, host, name) => {
+        const rest = settings.hosts.filter((h) => h.host !== host);
         update({
-          bridgeHost: target.host,
-          hosts: [{ name: target.name, host: target.host }, ...rest],
-          tokens: { ...settings.tokens, [target.host]: token },
+          bridgeHost: host,
+          hosts: [{ name, host }, ...rest],
+          tokens: { ...settings.tokens, [host]: token },
         });
         onClose();
       }}
@@ -209,6 +218,17 @@ const styles = StyleSheet.create({
     padding: S.md,
   },
   hostRowActive: { borderColor: C.borderStrong, backgroundColor: C.surfaceRaised },
+  codeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: S.md,
+    backgroundColor: C.surface,
+    borderRadius: S.radiusSm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
+    padding: S.md,
+    marginTop: S.xs,
+  },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.inkFaint },
   scanButton: {
     flexDirection: 'row',

@@ -2,7 +2,17 @@
 
 minibridge runs commands on this machine for apps on the local network. The client holds the business logic. The bridge runs argv arrays and streams I/O. The server binds loopback, the Tailscale range (100.64.0.0/10), and private LAN ranges (10/8, 192.168/16, 172.16/12).
 
-Clients must pair before they can run anything. A client posts to `/pair`; the bridge renders a token as a QR code and opens it in the image viewer on this machine. Only a person who can see this screen can pass the token to a phone. The code expires after 3 minutes, and scanning it makes the token permanent. Tokens live in `~/.minibridge/state.json`; delete an entry to revoke a device.
+Clients must pair before they can run anything. The bridge renders a token as a QR code and opens it in the image viewer on this machine, so only a person who can see this screen passes access to a phone. The code expires after 3 minutes, and scanning it makes the token permanent.
+
+Raise a code from this machine when the phone cannot reach it yet:
+
+```
+npm run pair
+```
+
+The code carries the addresses this machine answers on, so the phone connects with no discovery. A phone that already sees the bridge can instead ask for a code with `POST /pair`.
+
+Tokens live in `~/.minibridge/state.json`; delete an entry to revoke a device.
 
 ## Install
 

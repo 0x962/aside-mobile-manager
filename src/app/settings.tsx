@@ -13,7 +13,7 @@ export default function SettingsScreen() {
   const { settings, update } = useSettings();
   const aside = useMemo(() => new Aside(settings), [settings]);
   const [check, setCheck] = useState<string | null>(null);
-  const [pairing, setPairing] = useState<{ host: string; name: string } | null>(null);
+  const [pairing, setPairing] = useState<{ host?: string; name: string } | null>(null);
 
   const test = async () => {
     setCheck('Checking…');

@@ -110,11 +110,18 @@ async function startPairing(label) {
   const token = crypto.randomBytes(24).toString('base64url');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'minibridge-pair-'));
   const qrPath = path.join(dir, 'pair-with-this-code.png');
-  await QRCode.toFile(qrPath, JSON.stringify({ v: 1, token, host: os.hostname() }), {
-    width: 720,
-    margin: 2,
-    errorCorrectionLevel: 'M',
-  });
+  // The code carries every address this machine answers on, so a phone that
+  // has never seen this machine can pair without discovering it first. The
+  // overlay address leads: it works from any network.
+  const addresses = listenHosts()
+    .filter((h) => h !== '127.0.0.1')
+    .sort((a, b) => Number(b.startsWith('100.')) - Number(a.startsWith('100.')))
+    .map((h) => `${h}:${PORT}`);
+  await QRCode.toFile(
+    qrPath,
+    JSON.stringify({ v: 1, token, host: os.hostname().replace(/\.local$/, ''), hosts: addresses }),
+    { width: 720, margin: 2, errorCorrectionLevel: 'M' },
+  );
   pending.set(token, { expiresAt: Date.now() + PAIR_WINDOW_MS, qrPath });
   setTimeout(() => {
     if (pending.delete(token)) fs.rm(qrPath, { force: true }, () => {});

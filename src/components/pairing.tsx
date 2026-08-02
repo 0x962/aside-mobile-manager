@@ -6,12 +6,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T } from '@/components/text';
 import { C, S } from '@/constants/theme';
 import { Bridge } from '@/lib/bridge';
+import { probe } from '@/lib/discovery';
 
 type Stage = 'requesting' | 'scanning' | 'checking' | 'failed';
 
 /**
- * Pair with a host. The host shows a QR code on its own screen, so only
- * someone with access to that screen can hand out a token.
+ * Pair with a computer by scanning the code it shows on its own screen, so
+ * only someone who can see that screen hands out access.
+ *
+ * With a host, the app asks it to show the code. Without one, the code is
+ * raised on the computer itself (`npm run pair`) and carries its addresses,
+ * which is the only way in for a phone that cannot reach it yet.
  */
 export function PairingScreen({
   host,
@@ -19,9 +24,9 @@ export function PairingScreen({
   onPaired,
   onCancel,
 }: {
-  host: string;
+  host?: string;
   name: string;
-  onPaired: (token: string) => void;
+  onPaired: (token: string, host: string, name: string) => void;
   onCancel: () => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -32,9 +37,11 @@ export function PairingScreen({
   const claiming = useRef(false);
 
   const request = useCallback(async () => {
-    setStage('requesting');
     setError(null);
     claiming.current = false;
+    // Without a host there is nothing to ask: the computer raises the code.
+    if (!host) return setStage('scanning');
+    setStage('requesting');
     try {
       await new Bridge(host).requestPairing('Aside on iPhone');
       setStage('scanning');
@@ -55,20 +62,30 @@ export function PairingScreen({
 
   const onScan = async (data: string) => {
     if (claiming.current) return;
-    let token = '';
+    let payload: { token?: string; host?: string; hosts?: string[] };
     try {
-      const payload = JSON.parse(data);
-      token = typeof payload?.token === 'string' ? payload.token : '';
+      payload = JSON.parse(data);
     } catch {
       return; // some other QR code in view
     }
+    const token = typeof payload.token === 'string' ? payload.token : '';
     if (!token) return;
     claiming.current = true;
     setStage('checking');
     try {
-      // Claiming is what makes the code permanent; /health only reports.
-      await new Bridge(host).claimPairing(token);
-      onPaired(token);
+      // The code lists the addresses the computer answers on; take the first
+      // that this phone can actually reach.
+      const candidates = host ? [host] : (payload.hosts ?? []);
+      let reached = '';
+      for (const candidate of candidates) {
+        if (await probe(candidate, 2000)) {
+          reached = candidate;
+          break;
+        }
+      }
+      if (!reached) throw new Error('that computer is not reachable from this phone');
+      await new Bridge(reached).claimPairing(token);
+      onPaired(token, reached, payload.host || name);
     } catch (e) {
       claiming.current = false;
       setError(String(e instanceof Error ? e.message : e).slice(0, 160));
@@ -116,7 +133,11 @@ export function PairingScreen({
         </View>
 
         <View style={styles.steps}>
-          <Step n="1" text={`Look at ${name}. A QR code opens on its screen.`} />
+          {host ? (
+            <Step n="1" text={`Look at ${name}. A QR code opens on its screen.`} />
+          ) : (
+            <Step n="1" text="On the computer, run: npm run pair" />
+          )}
           <Step n="2" text="Point this phone at the code." />
           <Step n="3" text="The code expires after 3 minutes." />
         </View>
@@ -128,7 +149,7 @@ export function PairingScreen({
               <T variant="heading" style={{ color: C.inverseInk }}>Try again</T>
             </Pressable>
           )}
-          {stage === 'scanning' && (
+          {stage === 'scanning' && host && (
             <Pressable onPress={request} style={styles.secondary}>
               <T variant="label" style={{ color: C.ink }}>Show the code again</T>
             </Pressable>

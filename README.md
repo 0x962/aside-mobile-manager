@@ -43,7 +43,7 @@ npx expo start
 Figure out network: 
 Your phone needs to be able to talk to the bridge. You can use a free tailscale account like I do. 
 
-Open the app in Expo Go on the phone. The connect screen scans the network for a bridge and lists the machines it finds. The scan probes every address on the phone's own subnet, so it needs nothing to start; any bridge it reaches then reports the machines on the wider network. Pick a machine and the app pairs with it: the bridge opens a QR code on that machine's screen, and the phone scans it to get its token. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
+Open the app in Expo Go on the phone. The connect screen scans the network for a bridge and lists the machines it finds. The scan probes every address on the phone's own subnet, so it needs nothing to start; any bridge it reaches then reports the machines on the wider network. Pick a machine and the app pairs with it: the bridge opens a QR code on that machine's screen, and the phone scans it to get its token. When the phone cannot see the computer at all, run `npm run pair` in `bridge/` on the computer and tap "Scan a pairing code" in the app. That code carries the computer's addresses, so it needs no discovery. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
 
 ## Demo mode
 
