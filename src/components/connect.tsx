@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T } from '@/components/text';
 import { C, S } from '@/constants/theme';
@@ -34,7 +35,7 @@ export function ConnectScreen() {
         setNotice(
           info
             ? 'No bridge answered. Install the bridge on the machine that runs Aside, then scan again.'
-            : 'Tailscale is not active on this phone. Connect to your network, then scan again.',
+            : 'This phone is not on the network. Join the same network as your machine, then scan again.',
         );
         return;
       }
@@ -83,6 +84,7 @@ export function ConnectScreen() {
         </View>
 
         <View style={styles.section}>
+          <ScanButton scanning={scanning} onPress={scan} />
           {found.map((m) => (
             <Pressable
               key={m.host}
@@ -102,16 +104,6 @@ export function ConnectScreen() {
             </Pressable>
           ))}
           {notice && <T variant="faint">{notice}</T>}
-          <Pressable onPress={scan} disabled={scanning} style={styles.scanButton}>
-            {scanning ? (
-              <ActivityIndicator size="small" color={C.inverseInk} />
-            ) : (
-              <Ionicons name="search-outline" size={16} color={C.inverseInk} />
-            )}
-            <T variant="heading" style={{ color: C.inverseInk }}>
-              {scanning ? 'Scanning network…' : 'Scan network'}
-            </T>
-          </Pressable>
           {net && (
             <T variant="faint" style={{ textAlign: 'center' }}>
               This phone is {net.deviceName ? `${net.deviceName} ` : ''}on {net.tailnet}.
@@ -129,6 +121,58 @@ export function ConnectScreen() {
         </Pressable>
       </ScrollView>
     </View>
+  );
+}
+
+// The scan button keeps its size and place through every state; while a scan
+// runs, a light band sweeps across it and the spinner replaces the icon.
+function ScanButton({ scanning, onPress }: { scanning: boolean; onPress: () => void }) {
+  const sweep = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!scanning) return;
+    sweep.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(sweep, {
+        toValue: 1,
+        duration: 1300,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scanning, sweep]);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={scanning}
+      style={({ pressed }) => [styles.scanButton, pressed && { transform: [{ scale: 0.98 }] }]}>
+      {scanning && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.sweep,
+            { transform: [{ translateX: sweep.interpolate({ inputRange: [0, 1], outputRange: [-280, 280] }) }] },
+          ]}>
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.12)', 'rgba(0,0,0,0)']}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={{ flex: 1 }}
+          />
+        </Animated.View>
+      )}
+      {scanning ? (
+        <ActivityIndicator size="small" color={C.inverseInk} />
+      ) : (
+        <Ionicons name="search-outline" size={16} color={C.inverseInk} />
+      )}
+      <T variant="heading" style={{ color: C.inverseInk }}>
+        {scanning ? 'Scanning network…' : 'Scan network'}
+      </T>
+    </Pressable>
   );
 }
 
@@ -169,8 +213,10 @@ const styles = StyleSheet.create({
     backgroundColor: C.inverseBg,
     borderRadius: 999,
     paddingVertical: 14,
-    marginTop: S.sm,
+    marginBottom: S.sm,
+    overflow: 'hidden',
   },
+  sweep: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 180 },
   demoRow: {
     flexDirection: 'row',
     alignItems: 'center',
