@@ -4,9 +4,10 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, SectionList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Avatar, ProfileMenu } from '@/components/profile-menu';
 import { T } from '@/components/text';
 import { C, prettyModel, S } from '@/constants/theme';
-import { Aside, type SessionRow } from '@/lib/aside';
+import { Aside, type Account, type SessionRow } from '@/lib/aside';
 import { useRuns } from '@/lib/runs';
 import { useSettings } from '@/lib/settings';
 import { timeAgo } from '@/lib/time';
@@ -22,12 +23,14 @@ function sectionFor(ts: number): string {
 }
 
 export default function SessionsScreen() {
-  const { settings } = useSettings();
+  const { settings, update } = useSettings();
   const aside = useMemo(() => new Aside(settings), [settings]);
   const insets = useSafeAreaInsets();
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
   const runs = useRuns();
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -49,6 +52,14 @@ export default function SessionsScreen() {
       };
     }, [load]),
   );
+
+  useFocusEffect(
+    useCallback(() => {
+      aside.accounts().then(setAccounts).catch(() => setAccounts([]));
+    }, [aside]),
+  );
+
+  const activeAccount = accounts.find((a) => a.id === settings.account);
 
   const activeIds = new Set(runs.filter((r) => r.running).map((r) => r.sessionId));
 
@@ -74,10 +85,25 @@ export default function SessionsScreen() {
           <T variant="title">Sessions</T>
           <T variant="secondary">{hostName}</T>
         </View>
-        <Pressable onPress={() => router.push('/settings')} hitSlop={8} style={styles.iconButton}>
-          <Ionicons name="settings-outline" size={19} color={C.inkSecondary} />
+        <Pressable
+          onPress={() => setMenuOpen(true)}
+          hitSlop={8}
+          style={({ pressed }) => pressed && { opacity: 0.7 }}>
+          <Avatar name={activeAccount?.name} />
         </Pressable>
       </View>
+
+      <ProfileMenu
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        accounts={accounts}
+        activeId={settings.account}
+        onSelect={(id) => {
+          if (id === settings.account) return;
+          setSessions(null);
+          update({ account: id });
+        }}
+      />
 
       {error && (
         <Pressable style={styles.errorCard} onPress={() => router.push('/settings')}>
@@ -187,16 +213,6 @@ const styles = StyleSheet.create({
     paddingTop: S.md,
     paddingBottom: S.sm,
     gap: S.md,
-  },
-  iconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: C.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   list: { paddingHorizontal: S.lg, paddingTop: S.sm },
   sectionHeader: { paddingHorizontal: S.sm, paddingTop: S.lg, paddingBottom: S.sm },

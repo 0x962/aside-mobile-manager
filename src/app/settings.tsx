@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { T } from '@/components/text';
 import { C, F, S } from '@/constants/theme';
-import { Aside, type Account } from '@/lib/aside';
+import { Aside } from '@/lib/aside';
 import { probe, reachableBridge, scanTailnet } from '@/lib/discovery';
 import { useSettings, type BridgeHost } from '@/lib/settings';
 
@@ -19,7 +19,6 @@ export default function SettingsScreen() {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [newHost, setNewHost] = useState('');
-  const [accounts, setAccounts] = useState<Account[]>([]);
   const [check, setCheck] = useState<string | null>(null);
 
   const refreshStatuses = useCallback((list: HostRow[]) => {
@@ -35,10 +34,6 @@ export default function SettingsScreen() {
     refreshStatuses(settings.hosts.map((h) => ({ ...h, status: 'checking' as const })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    aside.accounts().then(setAccounts).catch(() => setAccounts([]));
-  }, [aside]);
 
   const scan = async () => {
     setScanning(true);
@@ -173,23 +168,6 @@ export default function SettingsScreen() {
 
       <Field label="Aside binary" value={settings.asideBin} onChange={(v) => update({ asideBin: v.trim() })} />
       <Field label="Aside home" value={settings.asideHome} onChange={(v) => update({ asideHome: v.trim() })} />
-
-      <View style={styles.section}>
-        <T variant="label">Account</T>
-        {accounts.map((a) => (
-          <Pressable
-            key={a.id}
-            style={[styles.hostRow, settings.account === a.id && styles.hostRowActive]}
-            onPress={() => update({ account: a.id })}>
-            <View style={{ flex: 1 }}>
-              <T variant="body">{a.name}</T>
-              <T variant="faint">{a.email ?? 'local'} · {a.authStatus}</T>
-            </View>
-            {settings.account === a.id && <Ionicons name="checkmark" size={17} color={C.ink} />}
-          </Pressable>
-        ))}
-        {accounts.length === 0 && <T variant="faint">Accounts load from the bridge.</T>}
-      </View>
 
       <Pressable style={styles.button} onPress={test}>
         <T variant="heading" style={{ color: C.inverseInk }}>Test connection</T>
