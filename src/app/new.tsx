@@ -18,7 +18,7 @@ import { T } from '@/components/text';
 import { C, F, S } from '@/constants/theme';
 import { Aside, type ModelOption } from '@/lib/aside';
 import { startRun, stopRun, useRuns } from '@/lib/runs';
-import { useSettings } from '@/lib/settings';
+import { computerFor, useSettings } from '@/lib/settings';
 
 const SUGGESTIONS = [
   'Summarize my open tabs',
@@ -138,7 +138,7 @@ export default function NewSessionScreen() {
             </View>
           )}
           <T variant="faint">
-            Runs in Aside on {settings.hosts.find((h) => h.host === settings.bridgeHost)?.name ?? 'your machine'},
+            Runs in Aside on {computerFor(settings, settings.bridgeHost)?.name ?? 'your computer'},
             with your logged-in accounts and open tabs.
           </T>
         </ScrollView>

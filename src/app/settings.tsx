@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { NetworkPanel, PairingFlow } from '@/components/network-panel';
+import { ComputerList, PairingFlow } from '@/components/computer-list';
 import { T } from '@/components/text';
 import { C, F, S } from '@/constants/theme';
 import { Aside } from '@/lib/aside';
@@ -13,7 +13,7 @@ export default function SettingsScreen() {
   const { settings, update } = useSettings();
   const aside = useMemo(() => new Aside(settings), [settings]);
   const [check, setCheck] = useState<string | null>(null);
-  const [pairing, setPairing] = useState<{ host?: string; name: string } | null>(null);
+  const [pairing, setPairing] = useState(false);
 
   const test = async () => {
     setCheck('Checking…');
@@ -27,19 +27,15 @@ export default function SettingsScreen() {
     }
   };
 
-  const forget = (host: string) => {
-    const tokens = { ...settings.tokens };
-    delete tokens[host];
+  const forget = (name: string) => {
+    const gone = settings.computers.find((c) => c.name === name);
     update({
-      tokens,
-      hosts: settings.hosts.filter((h) => h.host !== host),
-      ...(settings.bridgeHost === host ? { bridgeHost: '' } : {}),
+      computers: settings.computers.filter((c) => c.name !== name),
+      ...(gone?.addresses.includes(settings.bridgeHost) ? { bridgeHost: '' } : {}),
     });
   };
 
-  if (pairing) return <PairingFlow target={pairing} onClose={() => setPairing(null)} />;
-
-  const paired = Object.keys(settings.tokens);
+  if (pairing) return <PairingFlow onClose={() => setPairing(false)} />;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -53,7 +49,7 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <T variant="label">Computer</T>
-        <NetworkPanel onPair={setPairing} onConnected={() => router.back()} />
+        <ComputerList onPair={() => setPairing(true)} onConnected={() => router.back()} />
       </View>
 
       {settings.bridgeHost === DEMO_HOST && (
@@ -64,17 +60,17 @@ export default function SettingsScreen() {
         </Pressable>
       )}
 
-      {paired.length > 0 && (
+      {settings.computers.length > 0 && (
         <View style={styles.section}>
           <T variant="label">Paired computers</T>
-          {paired.map((host) => (
-            <View key={host} style={styles.row}>
+          {settings.computers.map((c) => (
+            <View key={c.name} style={styles.row}>
               <Ionicons name="lock-closed-outline" size={14} color={C.inkSecondary} />
               <View style={{ flex: 1 }}>
-                <T variant="body">{settings.hosts.find((h) => h.host === host)?.name ?? host}</T>
-                <T variant="faint">{host}</T>
+                <T variant="body">{c.name}</T>
+                <T variant="faint">{c.addresses.join(' · ')}</T>
               </View>
-              <Pressable onPress={() => forget(host)} hitSlop={10}>
+              <Pressable onPress={() => forget(c.name)} hitSlop={10}>
                 <T variant="label" style={{ color: C.error }}>Forget</T>
               </Pressable>
             </View>

@@ -11,8 +11,9 @@ import { T } from '@/components/text';
 import { C, F, prettyModel, S } from '@/constants/theme';
 import { Aside, type Account, type SessionRow } from '@/lib/aside';
 import { DEMO_HOST } from '@/lib/demo';
+import { firstReachable } from '@/lib/discovery';
 import { useRuns } from '@/lib/runs';
-import { useSettings } from '@/lib/settings';
+import { addressesFor, computerFor, useSettings } from '@/lib/settings';
 import { greeting, timeAgo } from '@/lib/time';
 
 function sectionFor(ts: number): string {
@@ -44,9 +45,16 @@ export default function SessionsScreen() {
       setSessions(await aside.listSessions());
       setError(null);
     } catch (e) {
+      // The computer may have moved between networks since the last load;
+      // its other addresses are worth a try before showing an error.
+      const elsewhere = await firstReachable(
+        addressesFor(settings, settings.bridgeHost).filter((a) => a !== settings.bridgeHost),
+        1500,
+      );
+      if (elsewhere) return update({ bridgeHost: elsewhere });
       setError(String(e instanceof Error ? e.message : e));
     }
-  }, [aside, configured]);
+  }, [aside, configured, settings, update]);
 
   useFocusEffect(
     useCallback(() => {
@@ -83,7 +91,7 @@ export default function SessionsScreen() {
       .map((k) => ({ title: k, data: buckets.get(k)! }));
   }, [sessions]);
 
-  const hostName = settings.hosts.find((h) => h.host === settings.bridgeHost)?.name ?? settings.bridgeHost;
+  const hostName = computerFor(settings, settings.bridgeHost)?.name ?? settings.bridgeHost;
 
   if (!settings.introSeen) return <IntroScreen onDone={() => update({ introSeen: true })} />;
   if (!configured) return <ConnectScreen />;

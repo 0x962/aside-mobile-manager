@@ -1,64 +1,46 @@
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T } from '@/components/text';
 import { C, S } from '@/constants/theme';
 import { Bridge } from '@/lib/bridge';
-import { probe } from '@/lib/discovery';
+import { firstReachable } from '@/lib/discovery';
 
-type Stage = 'requesting' | 'scanning' | 'checking' | 'failed';
+type Stage = 'scanning' | 'checking' | 'failed';
+
+export type Pairing = { name: string; addresses: string[]; token: string; connected: string };
 
 /**
- * Pair with a computer by scanning the code it shows on its own screen, so
- * only someone who can see that screen hands out access.
- *
- * With a host, the app asks it to show the code. Without one, the code is
- * raised on the computer itself (`npm run pair`) and carries its addresses,
- * which is the only way in for a phone that cannot reach it yet.
+ * Pair with a computer by scanning the code it shows on its own screen. The
+ * code carries the token and every address the computer answers on, so only
+ * someone who can see that screen gets access, and the phone needs to
+ * discover nothing.
  */
 export function PairingScreen({
-  host,
-  name,
   onPaired,
   onCancel,
 }: {
-  host?: string;
-  name: string;
-  onPaired: (token: string, host: string, name: string) => void;
+  onPaired: (pairing: Pairing) => void;
   onCancel: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
-  const [stage, setStage] = useState<Stage>('requesting');
+  const [stage, setStage] = useState<Stage>('scanning');
   const [error, setError] = useState<string | null>(null);
   // A camera reports the same code many times a second; claim only the first.
   const claiming = useRef(false);
 
-  const request = useCallback(async () => {
+  useEffect(() => {
+    if (permission && !permission.granted) requestPermission();
+  }, [permission, requestPermission]);
+
+  const retry = () => {
     setError(null);
     claiming.current = false;
-    // Without a host there is nothing to ask: the computer raises the code.
-    if (!host) return setStage('scanning');
-    setStage('requesting');
-    try {
-      await new Bridge(host).requestPairing('Aside on iPhone');
-      setStage('scanning');
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e).slice(0, 160));
-      setStage('failed');
-    }
-  }, [host]);
-
-  useEffect(() => {
-    if (!permission) return;
-    if (!permission.granted) {
-      requestPermission();
-      return;
-    }
-    request();
-  }, [permission, requestPermission, request]);
+    setStage('scanning');
+  };
 
   const onScan = async (data: string) => {
     if (claiming.current) return;
@@ -69,23 +51,15 @@ export function PairingScreen({
       return; // some other QR code in view
     }
     const token = typeof payload.token === 'string' ? payload.token : '';
-    if (!token) return;
+    const addresses = payload.hosts ?? [];
+    if (!token || !addresses.length) return;
     claiming.current = true;
     setStage('checking');
     try {
-      // The code lists the addresses the computer answers on; take the first
-      // that this phone can actually reach.
-      const candidates = host ? [host] : (payload.hosts ?? []);
-      let reached = '';
-      for (const candidate of candidates) {
-        if (await probe(candidate, 2000)) {
-          reached = candidate;
-          break;
-        }
-      }
-      if (!reached) throw new Error('that computer is not reachable from this phone');
-      await new Bridge(reached).claimPairing(token);
-      onPaired(token, reached, payload.host || name);
+      const connected = await firstReachable(addresses, 2000);
+      if (!connected) throw new Error('that computer is not reachable from this phone');
+      await new Bridge(connected).claimPairing(token);
+      onPaired({ name: payload.host || connected.split(':')[0], addresses, token, connected });
     } catch (e) {
       claiming.current = false;
       setError(String(e instanceof Error ? e.message : e).slice(0, 160));
@@ -99,7 +73,7 @@ export function PairingScreen({
         <Pressable onPress={onCancel} hitSlop={10} style={styles.headerButton}>
           <Ionicons name="chevron-back" size={22} color={C.ink} />
         </Pressable>
-        <T variant="heading" style={{ flex: 1, textAlign: 'center' }}>Pair with {name}</T>
+        <T variant="heading" style={{ flex: 1, textAlign: 'center' }}>Pair a computer</T>
         <View style={styles.headerButton} />
       </View>
 
@@ -123,8 +97,7 @@ export function PairingScreen({
                 <ActivityIndicator size="small" color={C.inkSecondary} />
               )}
               <T variant="secondary" style={{ textAlign: 'center' }}>
-                {stage === 'requesting' && 'Asking the computer to show a code…'}
-                {stage === 'checking' && 'Checking the code…'}
+                {stage === 'checking' && 'Connecting…'}
                 {stage === 'failed' && (error ?? 'Pairing failed.')}
                 {stage === 'scanning' && !permission?.granted && 'Camera access is needed to scan the code.'}
               </T>
@@ -133,25 +106,16 @@ export function PairingScreen({
         </View>
 
         <View style={styles.steps}>
-          {host ? (
-            <Step n="1" text={`Look at ${name}. A QR code opens on its screen.`} />
-          ) : (
-            <Step n="1" text="On the computer, run: npm run pair" />
-          )}
-          <Step n="2" text="Point this phone at the code." />
+          <Step n="1" text="On the computer, run: npm run pair" />
+          <Step n="2" text="Point this phone at the code on its screen." />
           <Step n="3" text="The code expires after 3 minutes." />
         </View>
 
         <View style={[styles.footer, { paddingBottom: insets.bottom + S.lg }]}>
           {stage === 'failed' && (
-            <Pressable onPress={request} style={styles.button}>
+            <Pressable onPress={retry} style={styles.button}>
               <Ionicons name="refresh" size={16} color={C.inverseInk} />
               <T variant="heading" style={{ color: C.inverseInk }}>Try again</T>
-            </Pressable>
-          )}
-          {stage === 'scanning' && host && (
-            <Pressable onPress={request} style={styles.secondary}>
-              <T variant="label" style={{ color: C.ink }}>Show the code again</T>
             </Pressable>
           )}
         </View>

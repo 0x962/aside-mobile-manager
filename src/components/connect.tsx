@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NetworkPanel, PairingFlow } from '@/components/network-panel';
+import { ComputerList, PairingFlow } from '@/components/computer-list';
 import { T } from '@/components/text';
 import { C, S } from '@/constants/theme';
 import { DEMO_HOST } from '@/lib/demo';
@@ -17,9 +17,9 @@ import { useSettings } from '@/lib/settings';
 export function ConnectScreen() {
   const { update } = useSettings();
   const insets = useSafeAreaInsets();
-  const [pairing, setPairing] = useState<{ host?: string; name: string } | null>(null);
+  const [pairing, setPairing] = useState(false);
 
-  if (pairing) return <PairingFlow target={pairing} onClose={() => setPairing(null)} />;
+  if (pairing) return <PairingFlow onClose={() => setPairing(false)} />;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -48,11 +48,11 @@ export function ConnectScreen() {
         <View style={styles.hero}>
           <T variant="title">Connect to Aside</T>
           <T variant="secondary" style={{ textAlign: 'center' }}>
-            Aside runs on your computer. This app starts{'\n'}and steers its sessions over your network.
+            Aside runs on your computer. Pair once with a code{'\n'}it shows, then steer its sessions from here.
           </T>
         </View>
 
-        <NetworkPanel onPair={setPairing} />
+        <ComputerList onPair={() => setPairing(true)} />
 
         <Pressable onPress={() => update({ bridgeHost: DEMO_HOST })} style={styles.demoRow}>
           <Ionicons name="flask-outline" size={16} color={C.inkSecondary} />

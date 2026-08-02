@@ -43,7 +43,15 @@ npx expo start
 Figure out network: 
 Your phone needs to be able to talk to the bridge. You can use a free tailscale account like I do. 
 
-Open the app in Expo Go on the phone. The connect screen scans the network for a bridge and lists the machines it finds. The scan probes every address on the phone's own subnet, so it needs nothing to start; any bridge it reaches then reports the machines on the wider network. Pick a machine and the app pairs with it: the bridge opens a QR code on that machine's screen, and the phone scans it to get its token. When the phone cannot see the computer at all, run `npm run pair` in `bridge/` on the computer and tap "Scan a pairing code" in the app. That code carries the computer's addresses, so it needs no discovery. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
+Open the app in Expo Go on the phone. Pair it with the computer:
+
+```
+cd bridge && npm run pair
+```
+
+A QR code opens on the computer's screen. Tap "Pair a computer" in the app and scan it. The code carries a key and every address the computer answers on, so the phone connects with no discovery and nothing to type. The code expires after 3 minutes.
+
+The app keeps all of a computer's addresses and uses whichever one answers, so it follows the computer between the local network and the tailnet. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
 
 ## Demo mode
 
@@ -51,7 +59,7 @@ The connect screen has one secondary option: Demo. It serves sample sessions fro
 
 ## Security model
 
-The bridge runs any command a paired client sends. Pairing needs physical sight of the host screen: the bridge shows the token as a QR code there, and the code expires after 3 minutes. Tokens live in `~/.minibridge/state.json` on the host; delete an entry to revoke a device. The bridge binds loopback, the Tailscale range, and private LAN ranges. Never expose port 4720 to the internet.
+The bridge runs any command a paired client sends. Pairing needs sight of the computer's screen: the key appears there as a QR code and expires after 3 minutes. There is no other way in, so an attacker on your network cannot reach the bridge without that code. Keys live in `~/.minibridge/state.json` on the computer; delete an entry to revoke a device. The bridge binds loopback, the Tailscale range, and private LAN ranges. Never expose port 4720 to the internet.
 
 ## Licenses
 

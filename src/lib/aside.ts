@@ -1,6 +1,6 @@
 import type { Bridge } from './bridge';
 import { bridgeFor } from './demo';
-import type { Settings } from './settings';
+import { tokenFor, type Settings } from './settings';
 
 export type SessionRow = {
   id: string;
@@ -55,7 +55,7 @@ export class Aside {
   account: number;
 
   constructor(s: Settings) {
-    this.bridge = bridgeFor(s.bridgeHost, s.tokens?.[s.bridgeHost] ?? '');
+    this.bridge = bridgeFor(s.bridgeHost, tokenFor(s, s.bridgeHost));
     this.bin = s.asideBin;
     this.home = s.asideHome;
     this.account = s.account;
