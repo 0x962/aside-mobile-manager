@@ -50,26 +50,25 @@ export async function probe(host: string, timeoutMs = 2500): Promise<boolean> {
 }
 
 /** Find a bridge that answers, in the given order. */
-export async function reachableBridge(hosts: string[]): Promise<Bridge | null> {
+export async function reachableBridge(
+  hosts: string[],
+  tokens: Record<string, string> = {},
+): Promise<Bridge | null> {
   for (const host of hosts) {
-    if (await probe(host)) return new Bridge(host);
+    if (await probe(host)) return new Bridge(host, tokens[host] ?? '');
   }
   return null;
 }
 
 /**
- * Ask a swept bridge who it is: its hostname for the list, and its address on
- * the overlay network so the same machine found both ways collapses to one row.
+ * Ask a bridge who it is. /health needs no token, so a machine gets its real
+ * name in the list before the phone has paired with it.
  */
 async function identify(host: string): Promise<{ name: string; overlayIp: string }> {
   const fallback = host.split(':')[0];
   try {
-    const out = await new Bridge(host).out(
-      ['sh', '-c', 'hostname -s; tailscale ip -4 2>/dev/null || /Applications/Tailscale.app/Contents/MacOS/Tailscale ip -4 2>/dev/null'],
-      { timeoutMs: 5000 },
-    );
-    const [name, overlayIp] = out.trim().split('\n');
-    return { name: name?.trim() || fallback, overlayIp: overlayIp?.trim() ?? '' };
+    const h = await new Bridge(host).health();
+    return { name: h.host || fallback, overlayIp: h.overlayIp ?? '' };
   } catch {
     return { name: fallback, overlayIp: '' };
   }
@@ -149,10 +148,14 @@ export async function scanOverlay(via: Bridge, port = BRIDGE_PORT): Promise<Foun
  */
 export async function scanAll(
   seeds: string[],
+  tokens: Record<string, string> = {},
   onProgress?: (done: number, total: number) => void,
 ): Promise<FoundHost[]> {
   const lan = await sweepLan(BRIDGE_PORT, onProgress);
-  const via = await reachableBridge([...lan.map((h) => h.host), ...seeds]);
+  // Listing the overlay network runs a command, so it needs a paired bridge.
+  // Without one the sweep still stands on its own.
+  const paired = [...lan.map((h) => h.host), ...seeds].filter((h) => tokens[h]);
+  const via = await reachableBridge(paired, tokens);
   const overlay = via ? await scanOverlay(via).catch(() => []) : [];
 
   // A machine found both ways appears twice under different addresses and

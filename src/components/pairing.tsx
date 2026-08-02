@@ -66,10 +66,11 @@ export function PairingScreen({
     claiming.current = true;
     setStage('checking');
     try {
-      const health = await new Bridge(host, token).health();
-      if (!health.paired) throw new Error('the host did not accept that code');
+      // Claiming is what makes the code permanent; /health only reports.
+      await new Bridge(host).claimPairing(token);
       onPaired(token);
     } catch (e) {
+      claiming.current = false;
       setError(String(e instanceof Error ? e.message : e).slice(0, 160));
       setStage('failed');
     }

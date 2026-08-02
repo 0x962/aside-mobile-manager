@@ -20,6 +20,18 @@ const MAX_BUFFER = 4 * 1024 * 1024; // per-process scrollback kept for late-join
 const KEEP_EXITED_MS = 60 * 60 * 1000;
 const RUN_TIMEOUT_MS = 120 * 1000;
 
+/** This machine's address on the overlay network, if it is on one. */
+function overlayIp() {
+  for (const addrs of Object.values(os.networkInterfaces())) {
+    for (const a of addrs ?? []) {
+      if (a.family !== 'IPv4') continue;
+      const [x, y] = a.address.split('.').map(Number);
+      if (x === 100 && y >= 64 && y <= 127) return a.address;
+    }
+  }
+  return '';
+}
+
 function bindable(octets) {
   const [a, b] = octets;
   if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT overlay (Tailscale)
@@ -234,12 +246,15 @@ async function handle(req, res) {
   // Open endpoints: liveness, and asking for a pairing code. Everything else
   // needs a token.
   if (req.method === 'GET' && url.pathname === '/health') {
+    // Identity is unauthenticated on purpose: a client must be able to name a
+    // machine in its list before it has paired with it.
     return respond(200, {
       ok: true,
       service: 'minibridge',
       pid: process.pid,
       procs: procs.size,
-      host: os.hostname(),
+      host: os.hostname().replace(/\.local$/, ''),
+      overlayIp: overlayIp(),
       authRequired: true,
       paired: authorizeReadOnly(tokenOf(req, url)),
     });
@@ -247,6 +262,13 @@ async function handle(req, res) {
   if (req.method === 'POST' && url.pathname === '/pair') {
     const info = await startPairing(body.label);
     return respond(200, info);
+  }
+  // Claiming is what turns a scanned code into a lasting token.
+  if (req.method === 'POST' && url.pathname === '/pair/claim') {
+    if (!authorize(body.token ?? tokenOf(req, url))) {
+      return respond(401, { error: 'that code is not valid any more' });
+    }
+    return respond(200, { ok: true, host: os.hostname().replace(/\.local$/, '') });
   }
 
   if (!authorize(tokenOf(req, url))) {

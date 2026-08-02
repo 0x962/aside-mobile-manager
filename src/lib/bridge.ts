@@ -25,6 +25,7 @@ export type Health = {
   ok: boolean;
   procs: number;
   host?: string;
+  overlayIp?: string;
   authRequired?: boolean;
   paired?: boolean;
 };
@@ -55,6 +56,17 @@ export class Bridge {
       body: JSON.stringify({ label }),
     });
     if (!res.ok) throw new Error(`the bridge refused to start pairing (${res.status})`);
+  }
+
+  /** Turn a scanned code into a lasting token. */
+  async claimPairing(token: string): Promise<string> {
+    const res = await fetch(this.url('/pair/claim'), {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.ok) throw new Error(body.error ?? 'that code was not accepted');
+    return body.host ?? '';
   }
 
   async run(argv: string[], opts?: { stdin?: string; timeoutMs?: number; cwd?: string }): Promise<RunResult> {

@@ -1,77 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { NetworkPanel, PairingFlow } from '@/components/network-panel';
 import { T } from '@/components/text';
 import { C, F, S } from '@/constants/theme';
 import { Aside } from '@/lib/aside';
 import { DEMO_HOST } from '@/lib/demo';
-import { probe, scanAll } from '@/lib/discovery';
-import { useSettings, type BridgeHost } from '@/lib/settings';
-
-type HostRow = BridgeHost & { os?: string; status: 'checking' | 'ok' | 'down' };
+import { useSettings } from '@/lib/settings';
 
 export default function SettingsScreen() {
   const { settings, update } = useSettings();
   const aside = useMemo(() => new Aside(settings), [settings]);
-  const [rows, setRows] = useState<HostRow[]>(
-    settings.hosts.map((h) => ({ ...h, status: 'checking' })),
-  );
-  const [scanning, setScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
   const [check, setCheck] = useState<string | null>(null);
-
-  const refreshStatuses = useCallback((list: HostRow[]) => {
-    setRows(list);
-    for (const row of list) {
-      probe(row.host).then((ok) =>
-        setRows((prev) => prev.map((r) => (r.host === row.host ? { ...r, status: ok ? 'ok' : 'down' } : r))),
-      );
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshStatuses(settings.hosts.map((h) => ({ ...h, status: 'checking' as const })));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const scan = async () => {
-    setScanning(true);
-    setScanError(null);
-    try {
-      // The demo bridge would report fictional machines; seed with real hosts.
-      const seeds = [settings.bridgeHost, ...settings.hosts.map((h) => h.host)].filter(
-        (h) => h && h !== DEMO_HOST,
-      );
-      const found = await scanAll(seeds);
-      if (!found.length) {
-        setScanError('No bridge found on this network.');
-        return;
-      }
-      const merged: HostRow[] = found.map((f) => ({
-        name: f.name,
-        host: f.host,
-        os: f.os,
-        status: f.hasBridge ? 'ok' : 'down',
-      }));
-      // Keep manually added hosts that the scan did not report.
-      for (const h of settings.hosts) {
-        if (!merged.some((m) => m.host === h.host)) merged.push({ ...h, status: 'checking' });
-      }
-      update({ hosts: merged.map(({ name, host }) => ({ name, host })) });
-      refreshStatuses(merged);
-    } catch (e) {
-      setScanError(String(e instanceof Error ? e.message : e).slice(0, 160));
-    } finally {
-      setScanning(false);
-    }
-  };
-
-  const removeHost = (host: string) => {
-    const next = settings.hosts.filter((h) => h.host !== host);
-    update({ hosts: next });
-    setRows((prev) => prev.filter((r) => r.host !== host));
-  };
+  const [pairing, setPairing] = useState<{ host: string; name: string } | null>(null);
 
   const test = async () => {
     setCheck('Checking…');
@@ -85,6 +27,20 @@ export default function SettingsScreen() {
     }
   };
 
+  const forget = (host: string) => {
+    const tokens = { ...settings.tokens };
+    delete tokens[host];
+    update({
+      tokens,
+      hosts: settings.hosts.filter((h) => h.host !== host),
+      ...(settings.bridgeHost === host ? { bridgeHost: '' } : {}),
+    });
+  };
+
+  if (pairing) return <PairingFlow target={pairing} onClose={() => setPairing(null)} />;
+
+  const paired = Object.keys(settings.tokens);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -94,56 +50,41 @@ export default function SettingsScreen() {
         <T variant="heading" style={{ flex: 1, textAlign: 'center' }}>Settings</T>
         <View style={styles.headerButton} />
       </View>
+
       <View style={styles.section}>
-        <View style={styles.rowBetween}>
-          <T variant="label">Bridge host</T>
-          <Pressable onPress={scan} hitSlop={8} style={styles.scanButton}>
-            {scanning ? (
-              <ActivityIndicator size="small" color={C.inkSecondary} />
-            ) : (
-              <T variant="label" style={{ color: C.ink }}>Scan network</T>
-            )}
-          </Pressable>
-        </View>
-        {rows.map((row) => {
-          const selected = settings.bridgeHost === row.host;
-          const selectable = row.status === 'ok';
-          return (
-            <Pressable
-              key={row.host}
-              style={[styles.hostRow, selected && styles.hostRowActive, !selectable && { opacity: 0.55 }]}
-              disabled={!selectable}
-              onPress={() => update({ bridgeHost: row.host })}>
-              <View
-                style={[
-                  styles.dot,
-                  row.status === 'ok' && { backgroundColor: C.running },
-                  row.status === 'down' && { backgroundColor: C.inkFaint },
-                ]}
-              />
-              <View style={{ flex: 1 }}>
-                <T variant="body">{row.name}</T>
-                <T variant="faint">
-                  {row.host}
-                  {row.os ? ` · ${row.os}` : ''}
-                  {row.status === 'down' ? ' · no bridge' : ''}
-                  {row.status === 'checking' ? ' · checking…' : ''}
-                </T>
-              </View>
-              {selected && <Ionicons name="checkmark" size={17} color={C.ink} />}
-              {!selected && (
-                <Pressable onPress={() => removeHost(row.host)} hitSlop={10}>
-                  <Ionicons name="close" size={15} color={C.inkFaint} />
-                </Pressable>
-              )}
-            </Pressable>
-          );
-        })}
-        {scanError && <T variant="faint" style={{ color: C.error }}>{scanError}</T>}
-        <T variant="faint">
-          The scan probes port 4720 across this network, then asks any bridge it reaches for other machines.
-        </T>
+        <T variant="label">Computer</T>
+        <NetworkPanel onPair={setPairing} onConnected={() => router.back()} />
       </View>
+
+      {settings.bridgeHost === DEMO_HOST && (
+        <Pressable style={styles.row} onPress={() => update({ bridgeHost: '' })}>
+          <Ionicons name="flask-outline" size={16} color={C.inkSecondary} />
+          <T variant="body" style={{ flex: 1 }}>Demo mode is on</T>
+          <T variant="label" style={{ color: C.ink }}>Exit</T>
+        </Pressable>
+      )}
+
+      {paired.length > 0 && (
+        <View style={styles.section}>
+          <T variant="label">Paired computers</T>
+          {paired.map((host) => (
+            <View key={host} style={styles.row}>
+              <Ionicons name="lock-closed-outline" size={14} color={C.inkSecondary} />
+              <View style={{ flex: 1 }}>
+                <T variant="body">{settings.hosts.find((h) => h.host === host)?.name ?? host}</T>
+                <T variant="faint">{host}</T>
+              </View>
+              <Pressable onPress={() => forget(host)} hitSlop={10}>
+                <T variant="label" style={{ color: C.error }}>Forget</T>
+              </Pressable>
+            </View>
+          ))}
+          <T variant="faint">
+            Forget drops the key from this phone. To revoke this phone on the computer, delete its
+            entry in ~/.minibridge/state.json there.
+          </T>
+        </View>
+      )}
 
       <Field
         label="Aside binary"
@@ -162,6 +103,10 @@ export default function SettingsScreen() {
         <T variant="heading" style={{ color: C.inverseInk }}>Test connection</T>
       </Pressable>
       {check && <T variant="secondary">{check}</T>}
+
+      <Pressable onPress={() => update({ introSeen: false })} style={styles.link}>
+        <T variant="label" style={{ color: C.inkSecondary }}>Show the introduction again</T>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -202,18 +147,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginHorizontal: -S.md },
   headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   section: { gap: S.sm },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  scanButton: {
-    backgroundColor: C.surfaceRaised,
-    borderRadius: 999,
-    paddingHorizontal: S.md,
-    paddingVertical: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.borderStrong,
-    minWidth: 96,
-    alignItems: 'center',
-  },
-  hostRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: S.md,
@@ -223,8 +157,6 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     padding: S.md,
   },
-  hostRowActive: { borderColor: C.borderStrong, backgroundColor: C.surfaceRaised },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.inkFaint },
   input: {
     backgroundColor: C.surface,
     borderRadius: S.radiusSm,
@@ -242,4 +174,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: S.md,
   },
+  link: { alignSelf: 'center', paddingVertical: S.sm },
 });
