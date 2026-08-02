@@ -30,7 +30,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.RECORD_AUDIO"
       ],
       "package": "com.theranorth.sidecarforaside",
       "versionCode": 1
@@ -59,9 +60,11 @@
     ],
     "primaryColor": "#000000",
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "REPLACE_AFTER_EAS_INIT"
+        "projectId": "e039d899-6315-472e-a409-a1b3261dcd28"
       }
-    }
+    },
+    "owner": "thera-north"
   }
 }
