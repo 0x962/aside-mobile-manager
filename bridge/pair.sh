@@ -12,3 +12,6 @@ fi
 
 echo "A pairing code is open on this screen. Scan it in the phone app."
 echo "The code expires in 3 minutes."
+echo
+echo "Whoever scans it can run any command on this computer, as you."
+echo "Scan it only on a device you control."

@@ -346,11 +346,61 @@ function upgrade(req, socket, head) {
   wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, p));
 }
 
-for (const host of listenHosts()) {
+const bound = listenHosts();
+for (const host of bound) {
   const server = http.createServer(handle);
   server.on('upgrade', upgrade);
+  // Two copies of the bridge is the common setup mistake, and the raw errno
+  // says nothing about what to do.
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(
+        `\n  Port ${PORT} on ${host} is already in use.\n\n` +
+          '  Another copy of the bridge is probably running. Check with:\n' +
+          `      lsof -nP -iTCP:${PORT} -sTCP:LISTEN\n\n` +
+          '  If you installed it twice, keep one. For the Homebrew service:\n' +
+          '      brew services restart minibridge\n' +
+          '      launchctl bootout gui/$(id -u)/co.nvdk.minibridge\n',
+      );
+      process.exit(1);
+    }
+    throw err;
+  });
   server.listen(PORT, host, () => console.log(`minibridge listening on ${host}:${PORT}`));
 }
+
+// Whoever starts the bridge has to know how to pair, and what pairing grants.
+// The log is the only place they will see it, so say it on every start.
+function banner() {
+  const paired = tokens.length;
+  const lines = [
+    '',
+    '  minibridge is running.',
+    '',
+    paired
+      ? `  ${paired} device${paired === 1 ? '' : 's'} paired. To add another, run:`
+      : '  No device is paired yet. To pair one, run:',
+    '',
+    '      minibridge pair',
+    '',
+    '  That opens a QR code on this screen. Scan it in the phone app.',
+    '  The code expires after 3 minutes.',
+    '',
+    '  Before you pair, know what it grants:',
+    '',
+    '    - A paired device can run any command on this computer, as you.',
+    '      Pair only devices you control.',
+    '    - Pairing needs the code shown on this screen, so only someone',
+    '      sitting here can hand out access.',
+    `    - Keys are stored in ${STATE_FILE}.`,
+    '      Delete an entry there to revoke a device.',
+    `    - The bridge listens on ${bound.join(', ')}.`,
+    '      Never forward port ' + PORT + ' to the internet.',
+    '',
+  ];
+  console.log(lines.join('\n'));
+}
+banner();
 
 // A bridge nobody has paired with is useless, so show a code as soon as it
 // starts. Once a device is paired this never fires again, and the timestamp

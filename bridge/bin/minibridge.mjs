@@ -20,6 +20,9 @@ if (command === 'serve') {
     if (!res.ok) throw new Error(`the bridge answered ${res.status}`);
     console.log('A pairing code is open on this screen. Scan it in the phone app.');
     console.log('The code expires in 3 minutes.');
+    console.log('');
+    console.log('Whoever scans it can run any command on this computer, as you.');
+    console.log('Scan it only on a device you control.');
   } catch (err) {
     console.error(`The bridge is not answering on port ${port}: ${err.message}`);
     console.error('Start it with: brew services start minibridge');

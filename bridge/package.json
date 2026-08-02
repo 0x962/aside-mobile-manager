@@ -1,6 +1,6 @@
 {
   "name": "minibridge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Run Aside commands on this machine for paired devices on your network",
   "scripts": {
     "pair": "./pair.sh",
