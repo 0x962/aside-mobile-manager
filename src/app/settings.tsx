@@ -19,7 +19,6 @@ export default function SettingsScreen() {
   );
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
-  const [newHost, setNewHost] = useState('');
   const [check, setCheck] = useState<string | null>(null);
 
   const refreshStatuses = useCallback((list: HostRow[]) => {
@@ -46,7 +45,7 @@ export default function SettingsScreen() {
       );
       const via = await reachableBridge(seeds);
       if (!via) {
-        setScanError('No bridge reachable to scan from. Add one host manually first.');
+        setScanError('No known bridge answered; the scan needs one reachable bridge.');
         return;
       }
       const found = await scanTailnet(via);
@@ -67,15 +66,6 @@ export default function SettingsScreen() {
     } finally {
       setScanning(false);
     }
-  };
-
-  const addHost = () => {
-    const host = newHost.trim().includes(':') ? newHost.trim() : `${newHost.trim()}:4720`;
-    if (!newHost.trim()) return;
-    setNewHost('');
-    const next = [...settings.hosts, { name: host.split(':')[0], host }];
-    update({ hosts: next, bridgeHost: host });
-    refreshStatuses(next.map((h) => ({ ...h, status: 'checking' as const })));
   };
 
   const removeHost = (host: string) => {
@@ -112,7 +102,7 @@ export default function SettingsScreen() {
             {scanning ? (
               <ActivityIndicator size="small" color={C.inkSecondary} />
             ) : (
-              <T variant="label" style={{ color: C.ink }}>Scan tailnet</T>
+              <T variant="label" style={{ color: C.ink }}>Scan network</T>
             )}
           </Pressable>
         </View>
@@ -151,24 +141,8 @@ export default function SettingsScreen() {
           );
         })}
         {scanError && <T variant="faint" style={{ color: C.error }}>{scanError}</T>}
-        <View style={styles.addRow}>
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            value={newHost}
-            onChangeText={setNewHost}
-            placeholder="add host, for example 100.x.y.z:4720"
-            placeholderTextColor={C.inkFaint}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardAppearance="dark"
-            onSubmitEditing={addHost}
-          />
-          <Pressable onPress={addHost} style={styles.addButton}>
-            <Ionicons name="add" size={20} color={C.inverseInk} />
-          </Pressable>
-        </View>
         <T variant="faint">
-          The scan asks a reachable bridge for tailnet machines, then probes port 4720 on each.
+          The scan asks a reachable bridge for machines on the network, then probes port 4720 on each.
         </T>
       </View>
 
@@ -252,15 +226,6 @@ const styles = StyleSheet.create({
   },
   hostRowActive: { borderColor: C.borderStrong, backgroundColor: C.surfaceRaised },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.inkFaint },
-  addRow: { flexDirection: 'row', gap: S.sm, alignItems: 'center' },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.inverseBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   input: {
     backgroundColor: C.surface,
     borderRadius: S.radiusSm,

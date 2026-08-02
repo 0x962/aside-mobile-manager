@@ -10,9 +10,8 @@ import { reachableBridge, scanTailnet, tailnetInfo, type TailnetHost, type Tailn
 import { useSettings } from '@/lib/settings';
 
 // The screen shown while no bridge host is configured: on first launch and
-// after leaving demo mode. The tailnet listing comes from a bridge, so the
-// scan probes known hosts first; with none reachable it can only report why,
-// and Settings takes a manual address.
+// after leaving demo mode. The machine listing comes from a bridge, so the
+// scan probes known hosts first; with none reachable it can only report why.
 export function ConnectScreen() {
   const { settings, update } = useSettings();
   const insets = useSafeAreaInsets();
@@ -34,15 +33,15 @@ export function ConnectScreen() {
         setFound([]);
         setNotice(
           info
-            ? 'No bridge answered. Install the bridge on the machine that runs Aside, or add its address in Settings.'
-            : 'Tailscale is not active on this phone. Join your tailnet, then scan again.',
+            ? 'No bridge answered. Install the bridge on the machine that runs Aside, then scan again.'
+            : 'Tailscale is not active on this phone. Connect to your network, then scan again.',
         );
         return;
       }
       const machines = (await scanTailnet(via)).filter((m) => m.online);
       setFound(machines);
       if (!machines.some((m) => m.hasBridge))
-        setNotice('No bridge found on the tailnet. Install it on the machine that runs Aside.');
+        setNotice('No bridge found on the network. Install it on the machine that runs Aside.');
     } catch (e) {
       setNotice(String(e instanceof Error ? e.message : e).slice(0, 160));
     } finally {
@@ -79,7 +78,7 @@ export function ConnectScreen() {
           </View>
           <T variant="title">Connect to Aside</T>
           <T variant="secondary" style={{ textAlign: 'center' }}>
-            Aside runs on your computer. This app starts{'\n'}and steers its sessions over your tailnet.
+            Aside runs on your computer. This app starts{'\n'}and steers its sessions over your network.
           </T>
         </View>
 
@@ -110,7 +109,7 @@ export function ConnectScreen() {
               <Ionicons name="search-outline" size={16} color={C.inverseInk} />
             )}
             <T variant="heading" style={{ color: C.inverseInk }}>
-              {scanning ? 'Scanning tailnet…' : 'Scan tailnet'}
+              {scanning ? 'Scanning network…' : 'Scan network'}
             </T>
           </Pressable>
           {net && (

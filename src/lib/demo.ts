@@ -203,25 +203,27 @@ function seedSessions(): DemoSession[] {
 // Canned replies for live demo turns.
 // ---------------------------------------------------------------------------
 
-type DemoReply = {
-  thinking: string;
-  tool: { name: string; title: string; args: object; result: string; elapsedMs: number } | null;
-  reply: string;
-  ticker: string[];
-};
+type DemoStep =
+  | { think: string }
+  | { tool: { name: string; title: string; args: object; result: string; elapsedMs: number } };
+
+type DemoReply = { steps: DemoStep[]; reply: string };
+
+const t$ = (name: string, title: string, args: object, result: string, elapsedMs: number): DemoStep => ({
+  tool: { name, title, args, result, elapsedMs },
+});
 
 function respond(text: string): DemoReply {
   const t = text.toLowerCase();
   if (t.includes('tab'))
     return {
-      thinking: 'One browser window, four tabs. Summarize each briefly.',
-      tool: {
-        name: 'browser',
-        title: 'List open tabs',
-        args: { action: 'tabs.list' },
-        result: '4 tabs: Gmail, Amazon order 112-99, Google Flights BOS→SFO, HN thread',
-        elapsedMs: 1800,
-      },
+      steps: [
+        { think: 'One browser window, four tabs. Read each one, then group by what needs action.' },
+        t$('browser', 'List open tabs', { action: 'tabs.list' }, '4 tabs: Gmail, Amazon order 112-99, Google Flights BOS→SFO, HN thread', 1800),
+        t$('browser', 'Read the Gmail tab', { action: 'tab.read', tab: 1 }, '2 unread; one from the accountant about Q2 invoices.', 2600),
+        t$('browser', 'Read the Flights tab', { action: 'tab.read', tab: 3 }, 'BOS→SFO Sep 12, tracked fare currently $214.', 2100),
+        { think: 'Nothing here is urgent; the accountant email matters most.' },
+      ],
       reply:
         'Four tabs are open:\n\n' +
         '- **Gmail** – two unread, one from the accountant.\n' +
@@ -229,56 +231,54 @@ function respond(text: string): DemoReply {
         '- **Google Flights** – BOS→SFO Sep 12, tracked fare at $214.\n' +
         '- **Hacker News** – a thread on local-first software.\n\n' +
         '*Demo data. Connect a machine that runs Aside to see your real tabs.*',
-      ticker: ['Listing open tabs…', 'Reading each tab…', 'Writing the summary…'],
     };
   if (t.includes('inbox') || t.includes('email') || t.includes('mail'))
     return {
-      thinking: 'Scan unread mail and separate what needs a reply from noise.',
-      tool: {
-        name: 'gmail',
-        title: 'Search unread mail',
-        args: { query: 'is:unread newer_than:1d' },
-        result: '6 unread. 1 needs a reply, 1 billing, 4 promotions.',
-        elapsedMs: 2400,
-      },
+      steps: [
+        { think: 'Scan unread from the last day, split what needs a reply from noise.' },
+        t$('gmail', 'Search unread mail', { query: 'is:unread newer_than:1d' }, '6 unread. 1 needs a reply, 1 billing, 4 promotions.', 2400),
+        t$('gmail', 'Read the landlord thread', { threadId: 'th-1182' }, 'Boiler visit Thursday 9–11am. Wants a yes/no.', 1900),
+        t$('gmail', 'Archive the promotions', { count: 4 }, 'Archived 4 messages.', 900),
+        { think: 'Only the landlord thread needs an answer; the bill is the usual direct debit.' },
+      ],
       reply:
         'One thing needs you: the **landlord** wants a yes/no on the Thursday boiler visit. The rest was a routine bill and four promotions, which I archived.\n\n*Demo data. On your own machine this runs against your real inbox.*',
-      ticker: ['Opening Gmail…', 'Scanning unread mail…', 'Sorting what matters…'],
     };
   if (t.includes('return') || t.includes('refund'))
     return {
-      thinking: 'Check the refund thread in this session first, then the order page.',
-      tool: {
-        name: 'browser',
-        title: 'Check the order page',
-        args: { url: 'https://www.arket.com/account/orders/48812' },
-        result: 'Order 48812 · Refund: pending · deadline Aug 11',
-        elapsedMs: 4800,
-      },
+      steps: [
+        { think: 'Check the inbox for a refund confirmation first, then the order page.' },
+        t$('gmail', 'Search for a refund confirmation', { query: 'from:arket refund' }, 'No refund email yet.', 1600),
+        t$('browser', 'Check the order page', { url: 'https://www.arket.com/account/orders/48812' }, 'Order 48812 · Refund: pending · deadline Aug 11', 4800),
+        { think: 'Still pending, and the nudge already went out earlier today. Nothing more to send.' },
+      ],
       reply:
         'Still *pending* on the order page. Their 14-day payout window closes **Aug 11**; the nudge email went out earlier today. I will flag any refund confirmation the moment it lands.\n\n*Demo data.*',
-      ticker: ['Opening the order page…', 'Reading the refund status…'],
     };
   if (t.includes('today') || t.includes('session'))
     return {
-      thinking: 'Summarize what the recent sessions did.',
-      tool: null,
+      steps: [
+        { think: 'Summarize what the recent sessions did.' },
+        t$('repl', 'Read today’s session list', { query: 'sessions updated today' }, '2 sessions today: inbox sweep, refund chase.', 1200),
+        t$('repl', 'Read both transcripts', { sessions: 2 }, 'Inbox: 2 items need action. Refund: nudge sent, deadline Aug 11.', 2100),
+      ],
       reply:
         'Today:\n\n' +
         '- **Morning inbox sweep** – two items need you: the accountant (Q2 invoices by Friday) and the landlord (boiler visit yes/no).\n' +
         '- **Chase the Arket refund** – nudge email sent, payout deadline Aug 11.\n\n' +
         'Earlier this week the dentist move and the gym cancellation both completed.\n\n*Demo data.*',
-      ticker: ['Reading recent sessions…', 'Writing the summary…'],
     };
   return {
-    thinking: 'The demo has no live browser. Explain what a real session would do.',
-    tool: null,
+    steps: [
+      { think: 'The demo has no live browser. Explain what a real session would do.' },
+      t$('browser', 'Open a browser tab', { action: 'tab.new' }, 'demo: no live browser, sample data only', 700),
+      { think: 'Answer from the sample data and point at the real setup.' },
+    ],
     reply:
       'In demo mode I work from sample data on this phone, so I cannot act on that.\n\n' +
       'On a connected machine, Aside would open its browser and do this with your own logins:\n\n' +
       `> ${text.trim().split('\n')[0]}\n\n` +
       'Install the bridge on the machine that runs Aside, then exit the demo and scan again.',
-    ticker: ['Reading the request…', 'Checking the demo data…'],
   };
 }
 
@@ -363,8 +363,9 @@ function newSession(argv: string[]): DemoSession {
   return s;
 }
 
-// Stream ticker lines, then append the reply to the session and settle the
-// process: a prompt redraw for warm procs, exit 0 for one-shot procs.
+// Play the response's steps one by one: each shows as a ticker line and lands
+// in the transcript as it happens, like a real turn. The reply follows, then
+// the process settles: a prompt redraw for warm procs, exit 0 for one-shot.
 function simulateTurn(p: DemoProc, text: string) {
   const session = sessions().find((s) => s.id === p.sessionId);
   if (!session) return endProc(p, 1);
@@ -373,30 +374,29 @@ function simulateTurn(p: DemoProc, text: string) {
   session.status = 'running';
   session.updatedAt = Date.now();
 
-  let at = 350;
-  emitLater(p, at, `Thinking: ${r.thinking}\n`);
-  for (const line of r.ticker) {
-    at += 900 + Math.floor(Math.random() * 600);
-    emitLater(p, at, `${line}\n`);
+  let at = 400;
+  for (const step of r.steps) {
+    schedule(p, at, () => {
+      if ('think' in step) {
+        emit(p, { type: 'data', text: `Thinking: ${step.think}\n` });
+        session.messages.push(assistant(think(step.think)));
+      } else {
+        emit(p, { type: 'data', text: `${step.tool.title}…\n` });
+        const id = `d${state.seq++}`;
+        session.messages.push(assistant(tool(id, step.tool.name, step.tool.title, step.tool.args)));
+        session.messages.push(toolResult(id, step.tool.result, step.tool.elapsedMs));
+      }
+      session.updatedAt = Date.now();
+    });
+    at += 1000 + Math.floor(Math.random() * 700);
   }
-  schedule(p, at + 1200, () => {
-    const content: object[] = [think(r.thinking)];
-    if (r.tool) content.push(tool(`d${state.seq++}`, r.tool.name, r.tool.title, r.tool.args));
-    content.push(say(r.reply));
-    session.messages.push(assistant(...content));
-    if (r.tool) {
-      const call: any = content[1];
-      session.messages.splice(session.messages.length - 1, 0, toolResult(call.id, r.tool.result, r.tool.elapsedMs));
-    }
+  schedule(p, at + 300, () => {
+    session.messages.push(assistant(say(r.reply)));
     session.status = 'idle';
     session.updatedAt = Date.now();
     if (p.kind === 'warm') emit(p, { type: 'data', text: `\nWorked for a moment\n${PROMPT}` });
     else endProc(p, 0);
   });
-}
-
-function emitLater(p: DemoProc, delay: number, text: string) {
-  schedule(p, delay, () => emit(p, { type: 'data', text }));
 }
 
 // Interrupt (^C from the stop button): drop pending work, settle idle.

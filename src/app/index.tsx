@@ -11,11 +11,10 @@ import { C, prettyModel, S } from '@/constants/theme';
 import { Aside, type Account, type SessionRow } from '@/lib/aside';
 import { useRuns } from '@/lib/runs';
 import { useSettings } from '@/lib/settings';
-import { timeAgo } from '@/lib/time';
+import { greeting, timeAgo } from '@/lib/time';
 
 function sectionFor(ts: number): string {
   const now = new Date();
-  const d = new Date(ts);
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   if (ts >= startOfDay) return 'Today';
   if (ts >= startOfDay - 86400000) return 'Yesterday';
@@ -88,7 +87,7 @@ export default function SessionsScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <T variant="title">Sessions</T>
+          <T variant="title">{greeting()}</T>
           <T variant="secondary">{hostName}</T>
         </View>
         <Pressable
