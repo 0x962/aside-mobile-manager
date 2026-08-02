@@ -56,6 +56,12 @@ minibridge pair          # Homebrew
 
 Default port: 4720. Override with `MINIBRIDGE_PORT`. Override bind addresses with `MINIBRIDGE_HOSTS` (comma-separated).
 
+The bridge binds loopback, real network interfaces carrying a private address, and the Tailscale range. It skips virtual interfaces such as VM and container bridges, which carry private addresses but reach nothing you think of as your network. To bind one address only, for example the Tailscale one:
+
+```
+MINIBRIDGE_HOSTS=100.x.y.z minibridge serve
+```
+
 - `GET /health` - liveness, process count, hostname, and whether the caller's token is paired. No token needed.
 - `POST /pair` - show a pairing QR code on this machine's screen. Body: `{label?}`. Returns `{expiresInMs}`. No token needed.
 

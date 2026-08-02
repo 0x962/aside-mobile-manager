@@ -41,13 +41,24 @@ function bindable(octets) {
   return false;
 }
 
+// Virtual interfaces: VM and container bridges, AirDrop, and the like. They
+// carry private addresses but reach nothing the user thinks of as their
+// network, so binding them only widens the surface.
+const VIRTUAL_IFACE = /^(bridge|vmnet|vnic|docker|utun(?!\d*$)|awdl|llw|anpi|ap\d)/i;
+
 function listenHosts() {
   if (process.env.MINIBRIDGE_HOSTS) return process.env.MINIBRIDGE_HOSTS.split(',');
   const hosts = ['127.0.0.1'];
-  for (const addrs of Object.values(os.networkInterfaces())) {
+  for (const [name, addrs] of Object.entries(os.networkInterfaces())) {
     for (const a of addrs ?? []) {
       if (a.family !== 'IPv4') continue;
-      if (bindable(a.address.split('.').map(Number))) hosts.push(a.address);
+      const octets = a.address.split('.').map(Number);
+      if (!bindable(octets)) continue;
+      // The overlay range is always worth binding, whichever tunnel carries
+      // it. Everything else must come from a real interface.
+      const isOverlay = octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127;
+      if (!isOverlay && VIRTUAL_IFACE.test(name)) continue;
+      hosts.push(a.address);
     }
   }
   return hosts;
