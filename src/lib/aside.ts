@@ -1,4 +1,5 @@
-import { Bridge } from './bridge';
+import type { Bridge } from './bridge';
+import { bridgeFor } from './demo';
 import type { Settings } from './settings';
 
 export type SessionRow = {
@@ -54,10 +55,26 @@ export class Aside {
   account: number;
 
   constructor(s: Settings) {
-    this.bridge = new Bridge(s.bridgeHost);
+    this.bridge = bridgeFor(s.bridgeHost);
     this.bin = s.asideBin;
     this.home = s.asideHome;
     this.account = s.account;
+  }
+
+  // Home directories per bridge host, so the lookup runs once per Mac, not
+  // once per screen mount.
+  private static homes = new Map<string, string>();
+
+  /** Empty bin/home settings resolve to the standard install layout under the bridge user's home. */
+  async ready(): Promise<void> {
+    if (this.bin && this.home) return;
+    let home = Aside.homes.get(this.bridge.host);
+    if (!home) {
+      home = (await this.bridge.out(['sh', '-c', 'echo "$HOME"'])).trim();
+      Aside.homes.set(this.bridge.host, home);
+    }
+    if (!this.bin) this.bin = `${home}/.local/bin/aside`;
+    if (!this.home) this.home = `${home}/.aside`;
   }
 
   private get db() {
@@ -65,6 +82,7 @@ export class Aside {
   }
 
   async listSessions(): Promise<SessionRow[]> {
+    await this.ready();
     const sql =
       'select s.id, s.title, s.status, s.model, s.ephemeral, s.created_at, s.updated_at, ' +
       "(select json_extract(r.user_message, '$[0].content[0].text') from session_runs r " +
@@ -84,6 +102,7 @@ export class Aside {
   }
 
   async sessionMeta(sessionId: string): Promise<{ title: string; modelId?: string; thinkingLevel?: string }> {
+    await this.ready();
     const safe = sessionId.replace(/'/g, '');
     const sql =
       `select s.title, s.model, (select json_extract(r.user_message, '$[0].content[0].text') ` +
@@ -100,12 +119,14 @@ export class Aside {
   }
 
   async newestSessionId(): Promise<string | null> {
+    await this.ready();
     const sql = 'select id from sessions order by created_at desc, rowid desc limit 1';
     const out = await this.bridge.out(['sqlite3', '-readonly', this.db, sql]);
     return out.trim() || null;
   }
 
   async transcript(sessionId: string): Promise<TranscriptItem[]> {
+    await this.ready();
     const r = await this.bridge.run([
       'sh',
       '-c',
@@ -123,15 +144,18 @@ export class Aside {
   }
 
   async sendMessage(sessionId: string, text: string, model?: ModelOption | null, effort?: string | null) {
+    await this.ready();
     return this.bridge.spawn([this.bin, '--session', sessionId, ...this.modelFlags(model, effort), text]);
   }
 
   async startSession(text: string, model?: ModelOption | null, effort?: string | null) {
+    await this.ready();
     return this.bridge.spawn([this.bin, ...this.modelFlags(model, effort), text]);
   }
 
   /** Upload file bytes to the Mac and return the remote path, for use in a prompt. */
   async uploadFile(name: string, base64: string): Promise<string> {
+    await this.ready();
     const safe = name.replace(/[^A-Za-z0-9._-]/g, '_');
     const dir = `${this.home.replace(/\/\.aside$/, '')}/aside-uploads`;
     const path = `${dir}/${Date.now()}-${safe}`;
@@ -140,6 +164,7 @@ export class Aside {
   }
 
   async accounts(): Promise<Account[]> {
+    await this.ready();
     const out = await this.bridge.out(['cat', `${this.home}/accounts.json`]);
     return JSON.parse(out).accounts.map((a: any) => ({
       id: a.id,
@@ -150,6 +175,7 @@ export class Aside {
   }
 
   async models(): Promise<ModelOption[]> {
+    await this.ready();
     const opts: ModelOption[] = [];
     const seen = new Set<string>();
     const add = (provider: string, providerName: string, modelId: string, name?: string) => {

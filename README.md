@@ -43,7 +43,11 @@ npx expo start
 Figure out network: 
 Your phone needs to be able to talk to the bridge. You can use a free tailscale account like I do. 
 
-Open the app in Expo Go on the phone. Set the bridge host in Settings to the Mac's Tailscale address, for example `100.x.y.z:4720`. The Scan button finds machines on the tailnet and probes each one for a bridge.
+Open the app in Expo Go on the phone. Set the bridge host in Settings to the Mac's Tailscale address, for example `100.x.y.z:4720`. The Scan button finds machines on the tailnet and probes each one for a bridge. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
+
+## Demo mode
+
+A fresh install starts in demo mode. The app serves sample sessions from the phone itself: the list, the transcripts, and live turns with simulated replies. No Mac, bridge, or tailnet is needed. Pick a real bridge host in Settings to leave demo mode. When no bridge answers, the session list offers the demo again. App Store reviewers can exercise the whole app this way.
 
 ## Security model
 

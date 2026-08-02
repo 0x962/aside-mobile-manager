@@ -115,12 +115,13 @@ export function ensureWarm(aside: Aside, sessionId: string) {
   warmPool.set(sessionId, w);
   evictIdleWarm();
 
-  const argv = [aside.bin, '--session', sessionId, '--account', String(aside.account)];
   // A page reload or app restart orphans warm processes on the bridge; adopt
   // a matching one instead of stacking duplicates.
-  aside.bridge
-    .procs()
-    .then(async (procs) => {
+  aside
+    .ready()
+    .then(async () => {
+      const argv = [aside.bin, '--session', sessionId, '--account', String(aside.account)];
+      const procs = await aside.bridge.procs();
       const existing = procs.filter((p) => p.running && JSON.stringify(p.argv) === JSON.stringify(argv));
       for (const extra of existing.slice(1)) aside.bridge.kill(extra.id);
       return existing[0] ?? aside.bridge.spawn(argv);

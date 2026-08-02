@@ -8,6 +8,7 @@ import { Avatar, ProfileMenu } from '@/components/profile-menu';
 import { T } from '@/components/text';
 import { C, prettyModel, S } from '@/constants/theme';
 import { Aside, type Account, type SessionRow } from '@/lib/aside';
+import { DEMO_HOST } from '@/lib/demo';
 import { useRuns } from '@/lib/runs';
 import { useSettings } from '@/lib/settings';
 import { timeAgo } from '@/lib/time';
@@ -24,6 +25,7 @@ function sectionFor(ts: number): string {
 
 export default function SessionsScreen() {
   const { settings, update } = useSettings();
+  const demo = settings.bridgeHost === DEMO_HOST;
   const aside = useMemo(() => new Aside(settings), [settings]);
   const insets = useSafeAreaInsets();
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
@@ -112,6 +114,23 @@ export default function SessionsScreen() {
             <T variant="label" style={{ color: C.error }}>Bridge unreachable</T>
           </View>
           <T variant="faint">{settings.bridgeHost} · tap to open settings</T>
+        </Pressable>
+      )}
+      {error && !demo && (
+        <Pressable style={styles.demoCard} onPress={() => update({ bridgeHost: DEMO_HOST })}>
+          <Ionicons name="play-circle-outline" size={18} color={C.ink} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <T variant="heading">Try the demo</T>
+            <T variant="faint">Sample sessions on this phone, no Mac needed.</T>
+          </View>
+          <Ionicons name="chevron-forward" size={15} color={C.inkFaint} />
+        </Pressable>
+      )}
+      {demo && (
+        <Pressable style={styles.demoBanner} onPress={() => router.push('/settings')}>
+          <Ionicons name="flask-outline" size={14} color={C.inkSecondary} />
+          <T variant="label" style={{ flex: 1 }}>Demo mode · sample data</T>
+          <T variant="label" style={{ color: C.ink }}>Switch</T>
         </Pressable>
       )}
 
@@ -241,6 +260,31 @@ const styles = StyleSheet.create({
     borderRadius: S.radiusSm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(248,113,113,0.4)',
+  },
+  demoCard: {
+    marginHorizontal: S.lg,
+    marginTop: S.sm,
+    padding: S.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: S.md,
+    backgroundColor: C.surfaceRaised,
+    borderRadius: S.radiusSm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.borderStrong,
+  },
+  demoBanner: {
+    marginHorizontal: S.lg,
+    marginTop: S.sm,
+    paddingHorizontal: S.lg,
+    paddingVertical: S.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: S.sm,
+    backgroundColor: C.surface,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: C.border,
   },
   fabWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   fab: {

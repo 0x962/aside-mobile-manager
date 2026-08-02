@@ -1,4 +1,5 @@
 import { Bridge } from './bridge';
+import { DEMO_HOST } from './demo';
 
 export type TailnetHost = {
   name: string;
@@ -12,6 +13,7 @@ const TAILSCALE_STATUS =
   'tailscale status --json 2>/dev/null || /Applications/Tailscale.app/Contents/MacOS/Tailscale status --json';
 
 export async function probe(host: string, timeoutMs = 2500): Promise<boolean> {
+  if (host === DEMO_HOST) return true;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {

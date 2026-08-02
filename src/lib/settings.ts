@@ -1,24 +1,25 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext } from 'react';
+import { DEMO_HOST } from './demo';
 
 export type BridgeHost = { name: string; host: string; builtIn?: boolean };
 
 export type Settings = {
   bridgeHost: string;
   hosts: BridgeHost[];
+  // Empty means auto: the paths resolve from the bridge user's home directory.
   asideBin: string;
   asideHome: string;
   account: number;
 };
 
+// A fresh install starts in demo mode; a phone without the tailnet cannot
+// reach any real bridge, and the demo shows the whole app instead of a spinner.
 export const DEFAULT_SETTINGS: Settings = {
-  bridgeHost: '100.74.122.84:4720',
-  hosts: [
-    { name: 'Mac mini', host: '100.74.122.84:4720', builtIn: true },
-    { name: 'Canary laptop', host: '100.88.168.85:4720', builtIn: true },
-  ],
-  asideBin: '/Users/navidkhan/.local/bin/aside',
-  asideHome: '/Users/navidkhan/.aside',
+  bridgeHost: DEMO_HOST,
+  hosts: [{ name: 'Demo', host: DEMO_HOST, builtIn: true }],
+  asideBin: '',
+  asideHome: '',
   account: 0,
 };
 

@@ -83,7 +83,8 @@ export default function SettingsScreen() {
     setCheck('Checking…');
     try {
       const health = await aside.bridge.health();
-      const version = (await aside.bridge.out([settings.asideBin, '-V'])).trim();
+      await aside.ready();
+      const version = (await aside.bridge.out([aside.bin, '-V'])).trim();
       setCheck(`Bridge ok (${health.procs} procs) · aside ${version}`);
     } catch (e) {
       setCheck(`Failed: ${String(e instanceof Error ? e.message : e).slice(0, 160)}`);
@@ -166,8 +167,18 @@ export default function SettingsScreen() {
         </T>
       </View>
 
-      <Field label="Aside binary" value={settings.asideBin} onChange={(v) => update({ asideBin: v.trim() })} />
-      <Field label="Aside home" value={settings.asideHome} onChange={(v) => update({ asideHome: v.trim() })} />
+      <Field
+        label="Aside binary"
+        value={settings.asideBin}
+        placeholder="auto · ~/.local/bin/aside on the bridge Mac"
+        onChange={(v) => update({ asideBin: v.trim() })}
+      />
+      <Field
+        label="Aside home"
+        value={settings.asideHome}
+        placeholder="auto · ~/.aside on the bridge Mac"
+        onChange={(v) => update({ asideHome: v.trim() })}
+      />
 
       <Pressable style={styles.button} onPress={test}>
         <T variant="heading" style={{ color: C.inverseInk }}>Test connection</T>
@@ -180,10 +191,12 @@ export default function SettingsScreen() {
 function Field({
   label,
   value,
+  placeholder,
   onChange,
 }: {
   label: string;
   value: string;
+  placeholder?: string;
   onChange: (v: string) => void;
 }) {
   const [local, setLocal] = useState(value);
@@ -195,6 +208,8 @@ function Field({
         value={local}
         onChangeText={setLocal}
         onEndEditing={() => onChange(local)}
+        placeholder={placeholder}
+        placeholderTextColor={C.inkFaint}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardAppearance="dark"
