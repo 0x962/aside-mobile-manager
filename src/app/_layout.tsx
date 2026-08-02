@@ -2,6 +2,7 @@ import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack } from 'expo-router';
+import Constants from 'expo-constants';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
@@ -11,9 +12,11 @@ import { C } from '@/constants/theme';
 import { DEMO_HOST } from '@/lib/demo';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, SettingsContext, type Settings } from '@/lib/settings';
 
-// Expo Go supplies its own splash and rejects these calls; the app still
-// controls when its first screen appears, so the rejection is nothing to act on.
-SplashScreen.preventAutoHideAsync().catch(() => {});
+// Expo Go shows its own splash and registers no native one, so these calls
+// raise "no native splash screen" there. A real build owns its splash and needs
+// them, to hold it until the fonts and the saved settings are ready.
+const ownsSplash = Constants.appOwnership !== 'expo';
+if (ownsSplash) SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const theme = {
   ...DarkTheme,
@@ -48,7 +51,7 @@ export default function RootLayout() {
   );
 
   useEffect(() => {
-    if (fontsLoaded && settings) SplashScreen.hideAsync().catch(() => {});
+    if (ownsSplash && fontsLoaded && settings) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded, settings]);
 
   if (!fontsLoaded || !settings) return null;
