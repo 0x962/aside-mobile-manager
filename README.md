@@ -12,7 +12,7 @@ This repo holds a phone app for [Aside](https://aside.com/). Aside is the first 
 
 The system has two parts:
 
-- `bridge/` holds minibridge. This is a small Node service meant to run next to your Aside browser. It accepts commands over a Tailscale network and runs them. It has no other logic.
+- `bridge/` holds minibridge. This is a small Node service meant to run next to your Aside browser. It accepts commands from paired devices on your own network and runs them. It has no other logic.
 - The Expo app in this repo runs on the phone. The app holds all product logic. It composes `aside` CLI commands and sends them through the bridge.
 
 ## How it works
@@ -25,33 +25,44 @@ The app reads session data from the files that Aside writes:
 
 Sends go through the `aside` CLI. The CLI starts one process per message. A process takes about two seconds to boot. The app maintains a warm pool of CLIs: it boots one interactive CLI process when you open a chat. Messages then go to that process over stdin. The end of a turn shows as the CLI prompt, and the process waits for the next message.
 
-## Run
+## Install the bridge
 
-Install the bridge on the machine that runs Aside:
+Run this on the computer that runs Aside:
 
 ```
-cd bridge && ./install.sh
+curl -fsSL https://raw.githubusercontent.com/0x962/aside-mobile-manager/main/bridge/install.sh | bash
 ```
 
-Run the app:
+The script installs the bridge to `~/.minibridge/bridge`, keeps it running with a launchd agent, and opens a pairing code on the screen. It uses the Node you already have when it is version 20 or newer, and otherwise puts a private copy in `~/.minibridge/node`, so nothing else on the machine changes.
+
+To also keep Aside running at login, add `--with-aside`.
+
+## Pair the phone
+
+Your phone reaches the bridge over your own network. Same Wi-Fi works. A free Tailscale account also works, and lets you reach the computer from anywhere.
+
+1. On the computer, show a pairing code:
+
+   ```
+   ~/.minibridge/bridge/pair.sh
+   ```
+
+   A QR code opens on that screen. The installer does this once for you.
+
+2. In the app, tap **Pair a computer**, then point the phone at the code.
+
+The code carries a key and every address the computer answers on, so the phone connects with no discovery and nothing to type. It expires after 3 minutes. Run `pair.sh` again for another device, or to pair again after you forget a computer in Settings.
+
+The app keeps all of a computer's addresses and uses whichever one answers, so it follows the computer between your local network and Tailscale. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
+
+## Run the app
 
 ```
 npm install
 npx expo start
 ```
 
-Figure out network: 
-Your phone needs to be able to talk to the bridge. You can use a free tailscale account like I do. 
-
-Open the app in Expo Go on the phone. Pair it with the computer:
-
-```
-cd bridge && npm run pair
-```
-
-A QR code opens on the computer's screen. Tap "Pair a computer" in the app and scan it. The code carries a key and every address the computer answers on, so the phone connects with no discovery and nothing to type. The code expires after 3 minutes.
-
-The app keeps all of a computer's addresses and uses whichever one answers, so it follows the computer between the local network and the tailnet. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
+Open it in Expo Go on the phone.
 
 ## Demo mode
 

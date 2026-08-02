@@ -16,16 +16,22 @@ Tokens live in `~/.minibridge/state.json`; delete an entry to revoke a device.
 
 ## Install
 
-```
-./install.sh
-```
-
-The script installs dependencies and loads a launchd agent (`co.nvdk.minibridge`). The agent starts the bridge at login and restarts it if it dies. Logs go to `~/Library/Logs/minibridge.log`.
-
-To run Aside at startup too:
+On the machine that runs Aside:
 
 ```
-./install.sh --with-aside
+curl -fsSL https://raw.githubusercontent.com/0x962/aside-mobile-manager/main/bridge/install.sh | bash
+```
+
+The script installs to `~/.minibridge/bridge`, loads a launchd agent (`co.nvdk.minibridge`) that starts the bridge at login and restarts it if it dies, then shows a pairing code. Logs go to `~/Library/Logs/minibridge.log`.
+
+Node 20 or newer is required. An existing install is used when it qualifies; otherwise the script puts a private copy in `~/.minibridge/node` and touches nothing else.
+
+Add `--with-aside` to keep Aside.app running at login too. Add `--no-agent` to install the files without loading the agent.
+
+To pair another device later:
+
+```
+~/.minibridge/bridge/pair.sh
 ```
 
 ## API
