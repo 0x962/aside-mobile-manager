@@ -16,22 +16,31 @@ Tokens live in `~/.minibridge/state.json`; delete an entry to revoke a device.
 
 ## Install
 
-On the machine that runs Aside:
+With Homebrew:
+
+```
+brew install 0x962/tap/minibridge
+brew services start minibridge
+minibridge pair
+```
+
+Or without it, on the machine that runs Aside:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/0x962/aside-mobile-manager/main/bridge/install.sh | bash
 ```
 
-The script installs to `~/.minibridge/bridge`, loads a launchd agent (`co.nvdk.minibridge`) that starts the bridge at login and restarts it if it dies, then shows a pairing code. Logs go to `~/Library/Logs/minibridge.log`.
+The script installs the latest release to `~/.minibridge/bridge`, loads a launchd agent (`co.nvdk.minibridge`) that starts the bridge at login and restarts it if it dies, then shows a pairing code. Logs go to `~/Library/Logs/minibridge.log`.
 
 Node 20 or newer is required. An existing install is used when it qualifies; otherwise the script puts a private copy in `~/.minibridge/node` and touches nothing else.
 
-Add `--with-aside` to keep Aside.app running at login too. Add `--no-agent` to install the files without loading the agent.
+Add `--with-aside` to keep Aside.app running at login too. Add `--no-agent` to install the files without loading the agent. Set `MINIBRIDGE_VERSION` to pin a release, or `MINIBRIDGE_BRANCH=main` to track the branch.
 
 To pair another device later:
 
 ```
-~/.minibridge/bridge/pair.sh
+minibridge pair          # Homebrew
+~/.minibridge/bridge/pair.sh   # curl install
 ```
 
 ## API

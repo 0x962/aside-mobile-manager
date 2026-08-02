@@ -27,13 +27,20 @@ Sends go through the `aside` CLI. The CLI starts one process per message. A proc
 
 ## Install the bridge
 
-Run this on the computer that runs Aside:
+On the computer that runs Aside, with Homebrew:
+
+```
+brew install 0x962/tap/minibridge
+brew services start minibridge
+```
+
+Or without Homebrew:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/0x962/aside-mobile-manager/main/bridge/install.sh | bash
 ```
 
-The script installs the bridge to `~/.minibridge/bridge`, keeps it running with a launchd agent, and opens a pairing code on the screen. It uses the Node you already have when it is version 20 or newer, and otherwise puts a private copy in `~/.minibridge/node`, so nothing else on the machine changes.
+The script installs the latest release to `~/.minibridge/bridge`, keeps it running with a launchd agent, and opens a pairing code on the screen. It uses the Node you already have when it is version 20 or newer, and otherwise puts a private copy in `~/.minibridge/node`, so nothing else on the machine changes.
 
 To also keep Aside running at login, add `--with-aside`.
 
@@ -44,14 +51,15 @@ Your phone reaches the bridge over your own network. Same Wi-Fi works. A free Ta
 1. On the computer, show a pairing code:
 
    ```
-   ~/.minibridge/bridge/pair.sh
+   minibridge pair                 # Homebrew
+   ~/.minibridge/bridge/pair.sh    # curl install
    ```
 
-   A QR code opens on that screen. The installer does this once for you.
+   A QR code opens on that screen. The curl installer does this once for you.
 
 2. In the app, tap **Pair a computer**, then point the phone at the code.
 
-The code carries a key and every address the computer answers on, so the phone connects with no discovery and nothing to type. It expires after 3 minutes. Run `pair.sh` again for another device, or to pair again after you forget a computer in Settings.
+The code carries a key and every address the computer answers on, so the phone connects with no discovery and nothing to type. It expires after 3 minutes. Run the pair command again for another device, or to pair again after you forget a computer in Settings.
 
 The app keeps all of a computer's addresses and uses whichever one answers, so it follows the computer between your local network and Tailscale. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
 
