@@ -5,8 +5,8 @@ import { Bridge, type ProcEvent, type ProcSummary } from './bridge';
 // (sqlite3, cat, aside, sh) gets a plausible answer here.
 export const DEMO_HOST = 'demo';
 
-export function bridgeFor(host: string): Bridge {
-  return host === DEMO_HOST ? new DemoBridge() : new Bridge(host);
+export function bridgeFor(host: string, token = ''): Bridge {
+  return host === DEMO_HOST ? new DemoBridge() : new Bridge(host, token);
 }
 
 const HOUR = 3_600_000;
@@ -508,7 +508,13 @@ export class DemoBridge extends Bridge {
 
   async health() {
     sessions();
-    return { ok: true, procs: [...state.procs.values()].filter((p) => p.running).length };
+    return {
+      ok: true,
+      procs: [...state.procs.values()].filter((p) => p.running).length,
+      host: 'demo',
+      authRequired: false,
+      paired: true,
+    };
   }
 
   async run(argv: string[]) {

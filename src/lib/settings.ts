@@ -13,6 +13,8 @@ export type Settings = {
   asideHome: string;
   account: number;
   introSeen: boolean;
+  // Pairing tokens the hosts issued, keyed by "ip:port".
+  tokens: Record<string, string>;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -29,6 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
   asideHome: '',
   account: 0,
   introSeen: false,
+  tokens: {},
 };
 
 const KEY = 'settings.v1';
@@ -41,6 +44,7 @@ export async function loadSettings(): Promise<Settings> {
   const raw = await AsyncStorage.getItem(KEY);
   const s: Settings = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
   s.hosts = (s.hosts ?? []).filter((h) => !BOGUS_HOSTS.has(h.host));
+  s.tokens = s.tokens ?? {};
   // Scan seeds must survive resets and upgrades: keep the active host listed,
   // and always fold the defaults back in.
   if (s.bridgeHost && s.bridgeHost !== DEMO_HOST && !s.hosts.some((h) => h.host === s.bridgeHost)) {

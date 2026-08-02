@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PairingScreen } from '@/components/pairing';
 import { T } from '@/components/text';
 import { C, S } from '@/constants/theme';
+import { Bridge } from '@/lib/bridge';
 import { DEMO_HOST } from '@/lib/demo';
 import { overlayInfo, scanAll, type FoundHost, type NetworkInfo } from '@/lib/discovery';
 import { useSettings } from '@/lib/settings';
@@ -22,6 +25,7 @@ export function ConnectScreen() {
   const [found, setFound] = useState<FoundHost[]>([]);
   const [net, setNet] = useState<NetworkInfo | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [pairing, setPairing] = useState<{ host: string; name: string } | null>(null);
 
   const scan = useCallback(async () => {
     setScanning(true);
@@ -52,13 +56,50 @@ export function ConnectScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const choose = (host: string, name: string) => {
+  const connect = (host: string, name: string, token?: string) => {
     const rest = settings.hosts.filter((h) => h.host !== host);
-    update({ bridgeHost: host, hosts: [{ name, host }, ...rest] });
+    update({
+      bridgeHost: host,
+      hosts: [{ name, host }, ...rest],
+      ...(token ? { tokens: { ...settings.tokens, [host]: token } } : {}),
+    });
   };
+
+  // A host that wants a token sends the phone to pairing first.
+  const choose = async (host: string, name: string) => {
+    const token = settings.tokens[host];
+    const health = await new Bridge(host, token).health().catch(() => null);
+    if (health?.authRequired && !health.paired) setPairing({ host, name });
+    else connect(host, name);
+  };
+
+  if (pairing)
+    return (
+      <PairingScreen
+        host={pairing.host}
+        name={pairing.name}
+        onCancel={() => setPairing(null)}
+        onPaired={(token) => {
+          const { host, name } = pairing;
+          setPairing(null);
+          connect(host, name, token);
+        }}
+      />
+    );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <Image
+        source={require('../../assets/images/aside-clouds.png')}
+        style={styles.sky}
+        contentFit="cover"
+        pointerEvents="none"
+      />
+      <LinearGradient
+        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)', C.bg]}
+        style={styles.skyFade}
+        pointerEvents="none"
+      />
       <View style={styles.header}>
         <View style={styles.headerButton} />
         <View style={{ flex: 1 }} />
@@ -71,9 +112,6 @@ export function ConnectScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + S.xl }]}>
         <View style={styles.hero}>
-          <View style={styles.heroIcon}>
-            <Ionicons name="git-network-outline" size={26} color={C.ink} />
-          </View>
           <T variant="title">Connect to Aside</T>
           <T variant="secondary" style={{ textAlign: 'center' }}>
             Aside runs on your computer. This app starts{'\n'}and steers its sessions over your network.
@@ -183,6 +221,8 @@ function ScanButton({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
+  sky: { position: 'absolute', top: 0, left: 0, right: 0, height: 280, opacity: 0.5 },
+  skyFade: { position: 'absolute', top: 0, left: 0, right: 0, height: 300 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: S.sm },
   headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   body: { paddingHorizontal: S.xl, gap: S.xl, flexGrow: 1 },

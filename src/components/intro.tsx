@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,6 +49,17 @@ export function IntroScreen({ onDone }: { onDone: () => void }) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <Image
+        source={require('../../assets/images/aside-clouds.png')}
+        style={styles.sky}
+        contentFit="cover"
+        pointerEvents="none"
+      />
+      <LinearGradient
+        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)', C.bg]}
+        style={styles.skyFade}
+        pointerEvents="none"
+      />
       <View style={[styles.body, { paddingBottom: insets.bottom + S.lg }]}>
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
@@ -92,6 +105,8 @@ export function IntroScreen({ onDone }: { onDone: () => void }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
+  sky: { position: 'absolute', top: 0, left: 0, right: 0, height: 300, opacity: 0.5 },
+  skyFade: { position: 'absolute', top: 0, left: 0, right: 0, height: 320 },
   body: { flex: 1, paddingHorizontal: S.xl, justifyContent: 'center', gap: S.xxl },
   hero: { alignItems: 'center', gap: S.sm },
   heroIcon: {

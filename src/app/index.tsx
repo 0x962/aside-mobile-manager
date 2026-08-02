@@ -65,6 +65,8 @@ export default function SessionsScreen() {
   );
 
   const activeAccount = accounts.find((a) => a.id === settings.account);
+  // The bridge says "not paired" when its token is missing or was revoked.
+  const needsPairing = /not paired/i.test(error ?? '');
 
   const activeIds = new Set(runs.filter((r) => r.running).map((r) => r.sessionId));
 
@@ -114,12 +116,22 @@ export default function SessionsScreen() {
       />
 
       {error && (
-        <Pressable style={styles.errorCard} onPress={() => router.push('/settings')}>
+        <Pressable
+          style={styles.errorCard}
+          onPress={() => (needsPairing ? update({ bridgeHost: '' }) : router.push('/settings'))}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
-            <Ionicons name="cloud-offline-outline" size={16} color={C.error} />
-            <T variant="label" style={{ color: C.error }}>Bridge unreachable</T>
+            <Ionicons
+              name={needsPairing ? 'lock-closed-outline' : 'cloud-offline-outline'}
+              size={16}
+              color={C.error}
+            />
+            <T variant="label" style={{ color: C.error }}>
+              {needsPairing ? 'Pairing needed' : 'Bridge unreachable'}
+            </T>
           </View>
-          <T variant="faint">{settings.bridgeHost} · tap to open settings</T>
+          <T variant="faint">
+            {settings.bridgeHost} · {needsPairing ? 'tap to pair again' : 'tap to open settings'}
+          </T>
         </Pressable>
       )}
       <SectionList

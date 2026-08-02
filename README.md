@@ -43,7 +43,7 @@ npx expo start
 Figure out network: 
 Your phone needs to be able to talk to the bridge. You can use a free tailscale account like I do. 
 
-Open the app in Expo Go on the phone. The connect screen scans the network for a bridge and lists the machines it finds. The scan probes every address on the phone's own subnet, so it needs nothing to start; any bridge it reaches then reports the machines on the wider network. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
+Open the app in Expo Go on the phone. The connect screen scans the network for a bridge and lists the machines it finds. The scan probes every address on the phone's own subnet, so it needs nothing to start; any bridge it reaches then reports the machines on the wider network. Pick a machine and the app pairs with it: the bridge opens a QR code on that machine's screen, and the phone scans it to get its token. The CLI path and the Aside home resolve from the bridge user's home directory; the two path fields in Settings override this.
 
 ## Demo mode
 
@@ -51,7 +51,7 @@ The connect screen has one secondary option: Demo. It serves sample sessions fro
 
 ## Security model
 
-The bridge runs any command that reaches it. It binds loopback, the Tailscale range, and private LAN ranges. Network access is the whole boundary: anyone on those networks can run commands on the machine. Run the bridge only on networks you trust, and never expose port 4720 to the internet.
+The bridge runs any command a paired client sends. Pairing needs physical sight of the host screen: the bridge shows the token as a QR code there, and the code expires after 3 minutes. Tokens live in `~/.minibridge/state.json` on the host; delete an entry to revoke a device. The bridge binds loopback, the Tailscale range, and private LAN ranges. Never expose port 4720 to the internet.
 
 ## Licenses
 

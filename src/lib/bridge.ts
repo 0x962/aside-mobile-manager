@@ -21,21 +21,46 @@ export type ProcEvent =
   | { type: 'data'; text: string }
   | { type: 'exit'; code: number | null };
 
+export type Health = {
+  ok: boolean;
+  procs: number;
+  host?: string;
+  authRequired?: boolean;
+  paired?: boolean;
+};
+
 export class Bridge {
-  constructor(public host: string) {}
+  constructor(
+    public host: string,
+    public token = '',
+  ) {}
 
   private url(path: string) {
     return `http://${this.host}${path}`;
   }
 
-  async health(): Promise<{ ok: boolean; procs: number }> {
-    const res = await fetch(this.url('/health'));
+  private get headers(): Record<string, string> {
+    return this.token ? { authorization: `Bearer ${this.token}` } : {};
+  }
+
+  async health(): Promise<Health> {
+    const res = await fetch(this.url('/health'), { headers: this.headers });
     return res.json();
+  }
+
+  /** Ask the host to show a pairing QR code on its own screen. */
+  async requestPairing(label: string): Promise<void> {
+    const res = await fetch(this.url('/pair'), {
+      method: 'POST',
+      body: JSON.stringify({ label }),
+    });
+    if (!res.ok) throw new Error(`the bridge refused to start pairing (${res.status})`);
   }
 
   async run(argv: string[], opts?: { stdin?: string; timeoutMs?: number; cwd?: string }): Promise<RunResult> {
     const res = await fetch(this.url('/run'), {
       method: 'POST',
+      headers: this.headers,
       body: JSON.stringify({
         argv,
         cwd: opts?.cwd,
@@ -64,6 +89,7 @@ export class Bridge {
   async spawn(argv: string[], opts?: { cwd?: string }): Promise<ProcSummary> {
     const res = await fetch(this.url('/procs'), {
       method: 'POST',
+      headers: this.headers,
       body: JSON.stringify({ argv, cwd: opts?.cwd }),
     });
     const body = await res.json();
@@ -72,19 +98,19 @@ export class Bridge {
   }
 
   async procs(): Promise<ProcSummary[]> {
-    const res = await fetch(this.url('/procs'));
+    const res = await fetch(this.url('/procs'), { headers: this.headers });
     return (await res.json()).procs;
   }
 
   async proc(id: string): Promise<ProcSummary & { output: string }> {
-    const res = await fetch(this.url(`/procs/${id}`));
+    const res = await fetch(this.url(`/procs/${id}`), { headers: this.headers });
     const body = await res.json();
     if (body.error) throw new Error(body.error);
     return { ...body, output: b64ToUtf8(body.outputB64) };
   }
 
   async kill(id: string, signal = 'SIGTERM'): Promise<void> {
-    await fetch(this.url(`/procs/${id}?signal=${signal}`), { method: 'DELETE' });
+    await fetch(this.url(`/procs/${id}?signal=${signal}`), { method: 'DELETE', headers: this.headers });
   }
 
   /** Stream a process with stdin access. */
@@ -93,7 +119,8 @@ export class Bridge {
     onEvent: (ev: ProcEvent) => void,
     onError?: (err: unknown) => void,
   ): { close: () => void; write: (text: string) => void; kill: (signal?: string) => void } {
-    const ws = new WebSocket(`ws://${this.host}/procs/${id}/io`);
+    const auth = this.token ? `?token=${encodeURIComponent(this.token)}` : '';
+    const ws = new WebSocket(`ws://${this.host}/procs/${id}/io${auth}`);
     const outbox: string[] = [];
     ws.onopen = () => {
       while (outbox.length) ws.send(outbox.shift()!);

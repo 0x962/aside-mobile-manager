@@ -55,7 +55,7 @@ export class Aside {
   account: number;
 
   constructor(s: Settings) {
-    this.bridge = bridgeFor(s.bridgeHost);
+    this.bridge = bridgeFor(s.bridgeHost, s.tokens?.[s.bridgeHost] ?? '');
     this.bin = s.asideBin;
     this.home = s.asideHome;
     this.account = s.account;
