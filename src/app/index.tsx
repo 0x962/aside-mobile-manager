@@ -2,13 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Pressable, RefreshControl, SectionList, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConnectScreen } from '@/components/connect';
 import { Avatar, ProfileMenu } from '@/components/profile-menu';
 import { T } from '@/components/text';
-import { C, prettyModel, S } from '@/constants/theme';
+import { C, F, prettyModel, S } from '@/constants/theme';
 import { Aside, type Account, type SessionRow } from '@/lib/aside';
+import { DEMO_HOST } from '@/lib/demo';
 import { useRuns } from '@/lib/runs';
 import { useSettings } from '@/lib/settings';
 import { greeting, timeAgo } from '@/lib/time';
@@ -88,7 +89,7 @@ export default function SessionsScreen() {
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <T variant="title">{greeting()}</T>
-          <T variant="secondary">{hostName}</T>
+          {settings.bridgeHost !== DEMO_HOST && <T variant="secondary">{hostName}</T>}
         </View>
         <Pressable
           onPress={() => setMenuOpen(true)}
@@ -196,7 +197,7 @@ export default function SessionsScreen() {
         style={[styles.scrim, { height: insets.bottom + 110 }]}
         pointerEvents="none"
       />
-      <View style={[styles.fabWrap, { bottom: insets.bottom + S.lg }]} pointerEvents="box-none">
+      <View style={[styles.fabWrap, { bottom: Math.max(insets.bottom - 2, S.md) }]} pointerEvents="box-none">
         <Pressable
           onPress={() => router.push('/new')}
           style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.97 }] }]}>
@@ -204,6 +205,15 @@ export default function SessionsScreen() {
           <T variant="heading" style={{ color: C.inverseInk }}>New session</T>
         </Pressable>
       </View>
+      {settings.bridgeHost === DEMO_HOST && (
+        <Pressable
+          onPress={() => update({ bridgeHost: '' })}
+          hitSlop={12}
+          style={[styles.demoChip, { bottom: Math.max(insets.bottom, S.md) + 4 }]}>
+          <Text style={styles.demoChipText}>DEMO</Text>
+          <Ionicons name="close" size={12} color="#C084FC" />
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -247,6 +257,20 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(248,113,113,0.4)',
   },
   fabWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  demoChip: {
+    position: 'absolute',
+    right: S.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: S.md,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(88,28,135,0.55)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(192,132,252,0.5)',
+  },
+  demoChipText: { color: '#C084FC', fontFamily: F.bold, fontSize: 11, letterSpacing: 2 },
   fab: {
     flexDirection: 'row',
     alignItems: 'center',

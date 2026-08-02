@@ -47,7 +47,7 @@ Open the app in Expo Go on the phone. The connect screen scans the network for a
 
 ## Demo mode
 
-The connect screen has one secondary option: Demo. It serves sample sessions from the phone itself: the list, the transcripts, and live turns that stream thoughts and tool calls before a canned reply. No computer, bridge, or network is needed. A purple glow at the bottom edge with a DEMO tag shows while demo mode is on; tap the tag to exit back to the connect screen. App Store reviewers can exercise the whole app this way.
+The connect screen has one secondary option: Demo. It serves sample sessions from the phone itself: the list, the transcripts, and live turns that stream thoughts and tool calls before a canned reply. No computer, bridge, or network is needed. A purple glow shows at the bottom edge while demo mode is on; tap the DEMO chip on the sessions screen to exit back to the connect screen. App Store reviewers can exercise the whole app this way.
 
 ## Security model
 

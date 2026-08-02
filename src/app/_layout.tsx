@@ -5,8 +5,9 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { C, F, S } from '@/constants/theme';
+import { StyleSheet, View } from 'react-native';
+import { AmbientGlow } from '@/components/ambient-glow';
+import { C } from '@/constants/theme';
 import { DEMO_HOST } from '@/lib/demo';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, SettingsContext, type Settings } from '@/lib/settings';
 
@@ -67,20 +68,13 @@ export default function RootLayout() {
             <Stack.Screen name="new" options={{ presentation: 'modal' }} />
             <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
           </Stack>
+          <AmbientGlow />
           {demo && (
-            <View pointerEvents="box-none" style={styles.demoLayer}>
-              <LinearGradient
-                colors={['rgba(168,85,247,0)', 'rgba(168,85,247,0.22)']}
-                style={styles.demoGradient}
-                pointerEvents="none"
-              />
-              <Pressable
-                onPress={() => ctx.update({ bridgeHost: '' })}
-                hitSlop={12}
-                style={styles.demoTag}>
-                <Text style={styles.demoText}>DEMO</Text>
-              </Pressable>
-            </View>
+            <LinearGradient
+              colors={['rgba(168,85,247,0)', 'rgba(168,85,247,0.22)']}
+              style={styles.demoGradient}
+              pointerEvents="none"
+            />
           )}
         </View>
       </ThemeProvider>
@@ -89,11 +83,8 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  // A tint over the bottom edge, out of every screen's layout; the tag sits
-  // at the side, clear of the centered new-session button. Tap the tag to
-  // exit demo mode.
-  demoLayer: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 130 },
-  demoGradient: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 130 },
-  demoTag: { position: 'absolute', right: S.lg, bottom: 12 },
-  demoText: { color: '#C084FC', fontFamily: F.bold, fontSize: 11, letterSpacing: 3 },
+  // A tint over the bottom edge of every screen while demo mode is on. It
+  // takes no touches and moves no layout; the exit chip lives on the
+  // sessions screen.
+  demoGradient: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 160 },
 });
