@@ -1,4 +1,4 @@
-# aside-mobile-manager
+# Aside Mobile App
 
 This repo holds a phone app for [Aside](https://aside.studio). Aside is the first "AI browser" I've used that is actually good. I've been able to improve my life by handing off personal and work admin; Amazon returns, tax returns, bill payments, expense reports, visa applications... it is so good I cannot imagine getting through these tasks without Aside anymore. I want Aside on my phone, and I couldn't wait any longer for the team to build one. Naturally, I built one.
 
