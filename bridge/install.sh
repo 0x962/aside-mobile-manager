@@ -9,7 +9,10 @@
 set -euo pipefail
 
 REPO="${MINIBRIDGE_REPO:-0x962/aside-mobile-manager}"
-BRANCH="${MINIBRIDGE_BRANCH:-main}"
+# A release by default, so an install is a known version. Set MINIBRIDGE_BRANCH
+# to track a branch instead.
+VERSION="${MINIBRIDGE_VERSION:-latest}"
+BRANCH="${MINIBRIDGE_BRANCH:-}"
 PREFIX="${MINIBRIDGE_PREFIX:-$HOME/.minibridge}"
 DIR="$PREFIX/bridge"
 LABEL="${MINIBRIDGE_LABEL:-co.nvdk.minibridge}"
@@ -38,11 +41,23 @@ if [[ -n "$SRC" && -f "$SRC/server.mjs" ]]; then
       { tar -C "$SRC" --exclude node_modules -cf - . | tar -C "$DIR" -xf -; }
   fi
 else
-  say "Downloading the bridge"
   mkdir -p "$DIR"
   TMP="$(mktemp -d)"
-  curl -fsSL "https://codeload.github.com/$REPO/tar.gz/refs/heads/$BRANCH" |
-    tar -xz -C "$TMP" --strip-components=2 "*/bridge"
+  if [[ -n "$BRANCH" ]]; then
+    say "Downloading the bridge from $BRANCH"
+    curl -fsSL "https://codeload.github.com/$REPO/tar.gz/refs/heads/$BRANCH" |
+      tar -xz -C "$TMP" --strip-components=2 "*/bridge"
+  else
+    if [[ "$VERSION" == "latest" ]]; then
+      ASSET="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" |
+        sed -n 's/.*"browser_download_url": *"\([^"]*minibridge[^"]*\.tar\.gz\)".*/\1/p' | head -1)"
+    else
+      ASSET="https://github.com/$REPO/releases/download/bridge-v$VERSION/minibridge-$VERSION.tar.gz"
+    fi
+    [[ -n "$ASSET" ]] || { echo "No release found for $REPO." >&2; exit 1; }
+    say "Downloading ${ASSET##*/}"
+    curl -fsSL "$ASSET" | tar -xz -C "$TMP"
+  fi
   cp -R "$TMP/." "$DIR/"
   rm -rf "$TMP"
 fi

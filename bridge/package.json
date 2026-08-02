@@ -1,24 +1,30 @@
 {
   "name": "minibridge",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Run Aside commands on this machine for paired devices on your network",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "pair": "./pair.sh"
+    "pair": "./pair.sh",
+    "start": "node server.mjs"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
-    "jsqr": "^1.4.0",
     "node-pty": "^1.1.0",
-    "pngjs": "^7.0.0",
     "qrcode": "^1.5.4",
     "ws": "^8.21.1"
   },
   "allowScripts": {
     "node-pty@1.1.0": true
-  }
+  },
+  "bin": {
+    "minibridge": "bin/minibridge.mjs"
+  },
+  "files": [
+    "bin",
+    "launchd",
+    "server.mjs",
+    "pair.sh",
+    "install.sh",
+    "README.md"
+  ]
 }
