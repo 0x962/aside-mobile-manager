@@ -138,7 +138,7 @@ export default function NewSessionScreen() {
             </View>
           )}
           <T variant="faint">
-            Runs in Aside on {settings.hosts.find((h) => h.host === settings.bridgeHost)?.name ?? 'your Mac'},
+            Runs in Aside on {settings.hosts.find((h) => h.host === settings.bridgeHost)?.name ?? 'your machine'},
             with your logged-in accounts and open tabs.
           </T>
         </ScrollView>

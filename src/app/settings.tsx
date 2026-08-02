@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View }
 import { T } from '@/components/text';
 import { C, F, S } from '@/constants/theme';
 import { Aside } from '@/lib/aside';
+import { DEMO_HOST } from '@/lib/demo';
 import { probe, reachableBridge, scanTailnet } from '@/lib/discovery';
 import { useSettings, type BridgeHost } from '@/lib/settings';
 
@@ -39,7 +40,11 @@ export default function SettingsScreen() {
     setScanning(true);
     setScanError(null);
     try {
-      const via = await reachableBridge([settings.bridgeHost, ...settings.hosts.map((h) => h.host)]);
+      // The demo bridge would report a fictional tailnet; scan only real hosts.
+      const seeds = [settings.bridgeHost, ...settings.hosts.map((h) => h.host)].filter(
+        (h) => h && h !== DEMO_HOST,
+      );
+      const via = await reachableBridge(seeds);
       if (!via) {
         setScanError('No bridge reachable to scan from. Add one host manually first.');
         return;
@@ -170,13 +175,13 @@ export default function SettingsScreen() {
       <Field
         label="Aside binary"
         value={settings.asideBin}
-        placeholder="auto · ~/.local/bin/aside on the bridge Mac"
+        placeholder="auto · ~/.local/bin/aside on the bridge machine"
         onChange={(v) => update({ asideBin: v.trim() })}
       />
       <Field
         label="Aside home"
         value={settings.asideHome}
-        placeholder="auto · ~/.aside on the bridge Mac"
+        placeholder="auto · ~/.aside on the bridge machine"
         onChange={(v) => update({ asideHome: v.trim() })}
       />
 

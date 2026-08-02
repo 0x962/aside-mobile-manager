@@ -61,7 +61,7 @@ export class Aside {
     this.account = s.account;
   }
 
-  // Home directories per bridge host, so the lookup runs once per Mac, not
+  // Home directories per bridge host, so the lookup runs once per machine, not
   // once per screen mount.
   private static homes = new Map<string, string>();
 
@@ -153,7 +153,7 @@ export class Aside {
     return this.bridge.spawn([this.bin, ...this.modelFlags(model, effort), text]);
   }
 
-  /** Upload file bytes to the Mac and return the remote path, for use in a prompt. */
+  /** Upload file bytes to the bridge machine and return the remote path, for use in a prompt. */
   async uploadFile(name: string, base64: string): Promise<string> {
     await this.ready();
     const safe = name.replace(/[^A-Za-z0-9._-]/g, '_');

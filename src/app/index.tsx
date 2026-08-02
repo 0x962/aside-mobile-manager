@@ -4,11 +4,11 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, SectionList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ConnectScreen } from '@/components/connect';
 import { Avatar, ProfileMenu } from '@/components/profile-menu';
 import { T } from '@/components/text';
 import { C, prettyModel, S } from '@/constants/theme';
 import { Aside, type Account, type SessionRow } from '@/lib/aside';
-import { DEMO_HOST } from '@/lib/demo';
 import { useRuns } from '@/lib/runs';
 import { useSettings } from '@/lib/settings';
 import { timeAgo } from '@/lib/time';
@@ -25,7 +25,6 @@ function sectionFor(ts: number): string {
 
 export default function SessionsScreen() {
   const { settings, update } = useSettings();
-  const demo = settings.bridgeHost === DEMO_HOST;
   const aside = useMemo(() => new Aside(settings), [settings]);
   const insets = useSafeAreaInsets();
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
@@ -36,14 +35,17 @@ export default function SessionsScreen() {
   const runs = useRuns();
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const configured = settings.bridgeHost !== '';
+
   const load = useCallback(async () => {
+    if (!configured) return;
     try {
       setSessions(await aside.listSessions());
       setError(null);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
-  }, [aside]);
+  }, [aside, configured]);
 
   useFocusEffect(
     useCallback(() => {
@@ -79,6 +81,8 @@ export default function SessionsScreen() {
   }, [sessions]);
 
   const hostName = settings.hosts.find((h) => h.host === settings.bridgeHost)?.name ?? settings.bridgeHost;
+
+  if (!configured) return <ConnectScreen />;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -116,24 +120,6 @@ export default function SessionsScreen() {
           <T variant="faint">{settings.bridgeHost} · tap to open settings</T>
         </Pressable>
       )}
-      {error && !demo && (
-        <Pressable style={styles.demoCard} onPress={() => update({ bridgeHost: DEMO_HOST })}>
-          <Ionicons name="play-circle-outline" size={18} color={C.ink} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <T variant="heading">Try the demo</T>
-            <T variant="faint">Sample sessions on this phone, no Mac needed.</T>
-          </View>
-          <Ionicons name="chevron-forward" size={15} color={C.inkFaint} />
-        </Pressable>
-      )}
-      {demo && (
-        <Pressable style={styles.demoBanner} onPress={() => router.push('/settings')}>
-          <Ionicons name="flask-outline" size={14} color={C.inkSecondary} />
-          <T variant="label" style={{ flex: 1 }}>Demo mode · sample data</T>
-          <T variant="label" style={{ color: C.ink }}>Switch</T>
-        </Pressable>
-      )}
-
       <SectionList
         sections={sections}
         keyExtractor={(s) => s.id}
@@ -167,7 +153,7 @@ export default function SessionsScreen() {
               <Ionicons name="chatbubbles-outline" size={40} color={C.inkFaint} />
               <T variant="heading">No sessions yet</T>
               <T variant="secondary" style={{ textAlign: 'center' }}>
-                Start one and Aside runs it on your Mac,{'\n'}with your accounts and open tabs.
+                Start one and Aside runs it on your computer,{'\n'}with your accounts and open tabs.
               </T>
             </View>
           ) : null
@@ -260,31 +246,6 @@ const styles = StyleSheet.create({
     borderRadius: S.radiusSm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(248,113,113,0.4)',
-  },
-  demoCard: {
-    marginHorizontal: S.lg,
-    marginTop: S.sm,
-    padding: S.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: S.md,
-    backgroundColor: C.surfaceRaised,
-    borderRadius: S.radiusSm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.borderStrong,
-  },
-  demoBanner: {
-    marginHorizontal: S.lg,
-    marginTop: S.sm,
-    paddingHorizontal: S.lg,
-    paddingVertical: S.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: S.sm,
-    backgroundColor: C.surface,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
   },
   fabWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   fab: {

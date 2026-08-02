@@ -228,7 +228,7 @@ function respond(text: string): DemoReply {
         '- **Amazon** – order 112-99 arrives tomorrow.\n' +
         '- **Google Flights** – BOS→SFO Sep 12, tracked fare at $214.\n' +
         '- **Hacker News** – a thread on local-first software.\n\n' +
-        '*Demo data. Connect a Mac that runs Aside to see your real tabs.*',
+        '*Demo data. Connect a machine that runs Aside to see your real tabs.*',
       ticker: ['Listing open tabs…', 'Reading each tab…', 'Writing the summary…'],
     };
   if (t.includes('inbox') || t.includes('email') || t.includes('mail'))
@@ -242,7 +242,7 @@ function respond(text: string): DemoReply {
         elapsedMs: 2400,
       },
       reply:
-        'One thing needs you: the **landlord** wants a yes/no on the Thursday boiler visit. The rest was a routine bill and four promotions, which I archived.\n\n*Demo data. On your own Mac this runs against your real inbox.*',
+        'One thing needs you: the **landlord** wants a yes/no on the Thursday boiler visit. The rest was a routine bill and four promotions, which I archived.\n\n*Demo data. On your own machine this runs against your real inbox.*',
       ticker: ['Opening Gmail…', 'Scanning unread mail…', 'Sorting what matters…'],
     };
   if (t.includes('return') || t.includes('refund'))
@@ -275,9 +275,9 @@ function respond(text: string): DemoReply {
     tool: null,
     reply:
       'In demo mode I work from sample data on this phone, so I cannot act on that.\n\n' +
-      'On a connected Mac, Aside would open its browser and do this with your own logins:\n\n' +
+      'On a connected machine, Aside would open its browser and do this with your own logins:\n\n' +
       `> ${text.trim().split('\n')[0]}\n\n` +
-      'Install the bridge on the Mac that runs Aside, then pick it in Settings.',
+      'Install the bridge on the machine that runs Aside, then exit the demo and scan again.',
     ticker: ['Reading the request…', 'Checking the demo data…'],
   };
 }

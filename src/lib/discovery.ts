@@ -12,6 +12,25 @@ export type TailnetHost = {
 const TAILSCALE_STATUS =
   'tailscale status --json 2>/dev/null || /Applications/Tailscale.app/Contents/MacOS/Tailscale status --json';
 
+export type TailnetInfo = { tailnet: string; deviceName: string; ip: string };
+
+// Tailscale serves the local device's info over plain HTTP at 100.100.100.100
+// when the tunnel is up. It lists no peers; it only proves tailnet membership.
+export async function tailnetInfo(timeoutMs = 2000): Promise<TailnetInfo | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch('http://100.100.100.100/api/data', { signal: ctrl.signal });
+    const body = await res.json();
+    if (!body.TailnetName) return null;
+    return { tailnet: body.TailnetName, deviceName: body.DeviceName ?? '', ip: body.IPv4 ?? '' };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function probe(host: string, timeoutMs = 2500): Promise<boolean> {
   if (host === DEMO_HOST) return true;
   const ctrl = new AbortController();

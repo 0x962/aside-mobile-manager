@@ -2,9 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext } from 'react';
 import { DEMO_HOST } from './demo';
 
-export type BridgeHost = { name: string; host: string; builtIn?: boolean };
+export type BridgeHost = { name: string; host: string };
 
 export type Settings = {
+  // Empty means unconfigured: the app shows the connect screen.
   bridgeHost: string;
   hosts: BridgeHost[];
   // Empty means auto: the paths resolve from the bridge user's home directory.
@@ -13,11 +14,9 @@ export type Settings = {
   account: number;
 };
 
-// A fresh install starts in demo mode; a phone without the tailnet cannot
-// reach any real bridge, and the demo shows the whole app instead of a spinner.
 export const DEFAULT_SETTINGS: Settings = {
-  bridgeHost: DEMO_HOST,
-  hosts: [{ name: 'Demo', host: DEMO_HOST, builtIn: true }],
+  bridgeHost: '',
+  hosts: [],
   asideBin: '',
   asideHome: '',
   account: 0,
@@ -28,9 +27,8 @@ const KEY = 'settings.v1';
 export async function loadSettings(): Promise<Settings> {
   const raw = await AsyncStorage.getItem(KEY);
   const s: Settings = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
-  // Built-in hosts always appear, ahead of saved custom hosts.
-  const custom = (s.hosts ?? []).filter((h) => !h.builtIn);
-  s.hosts = [...DEFAULT_SETTINGS.hosts, ...custom];
+  // The demo is a mode, not a host; drop rows older builds may have saved.
+  s.hosts = (s.hosts ?? []).filter((h) => h.host !== DEMO_HOST);
   return s;
 }
 
