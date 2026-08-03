@@ -58,6 +58,16 @@ export class Bridge {
     if (!res.ok) throw new Error(`the bridge refused to start pairing (${res.status})`);
   }
 
+  /** Ask this computer to wake the phone when a turn finishes. */
+  async registerDevice(pushToken: string): Promise<void> {
+    const res = await fetch(this.url('/devices'), {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify({ pushToken, platform: 'ios' }),
+    });
+    if (!res.ok) throw new Error(`the bridge refused the device (${res.status})`);
+  }
+
   /** Turn a scanned code into a lasting token. */
   async claimPairing(token: string): Promise<string> {
     const res = await fetch(this.url('/pair/claim'), {

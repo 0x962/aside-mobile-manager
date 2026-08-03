@@ -16,7 +16,10 @@
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
         },
-        "UIViewControllerBasedStatusBarAppearance": false
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       },
       "buildNumber": "2",
       "supportsTablet": false
@@ -55,6 +58,13 @@
         "expo-camera",
         {
           "cameraPermission": "The camera scans the pairing code shown on your computer screen."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#000000"
         }
       ]
     ],

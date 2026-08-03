@@ -25,7 +25,22 @@ The app talks only to the bridge on a computer you own, over your own network. I
 sends the commands needed to list sessions, read transcripts, and pass on the
 messages you type. Session content stays between your phone and your computer.
 
-The app contacts no other service. It has no analytics and no crash reporting.
+The app has no analytics and no crash reporting.
+
+## Notifications, if you turn them on
+
+Notifications are off unless you switch them on in Settings. When they are on,
+one thing does leave your network: a wake-up signal.
+
+Your computer asks Expo's push service, which forwards to Apple, to wake this
+phone. That signal carries no session content. It says only that a turn
+finished, which computer sent it, and an internal session identifier. Your
+phone then reads the session title and the reply **directly from your own
+computer**, over your own network, and shows the notification locally.
+
+So Expo and Apple can see that a device should wake up, and roughly when. They
+do not see what Aside did, what you asked, or what it replied. Turning
+notifications off in Settings stops the signal entirely.
 
 Tapping a link, such as the link to aside.com or to the source code, opens your
 default browser. What happens after that is governed by that site's own policy.

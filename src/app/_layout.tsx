@@ -7,9 +7,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { AmbientGlow } from '@/components/ambient-glow';
 import { C } from '@/constants/theme';
 import { DEMO_HOST } from '@/lib/demo';
+import { announceTurn } from '@/lib/notify';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, SettingsContext, type Settings } from '@/lib/settings';
 
 // Expo Go shows its own splash and registers no native one, so these calls
@@ -53,6 +55,18 @@ export default function RootLayout() {
   useEffect(() => {
     if (ownsSplash && fontsLoaded && settings) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded, settings]);
+
+  // A wake-up carries no content: read the session from the bridge that sent
+  // it, then say it locally.
+  useEffect(() => {
+    if (!settings?.notifyOnFinish) return;
+    const sub = Notifications.addNotificationReceivedListener((n) => {
+      const data = n.request.content.data as { kind?: string; sessionId?: string; host?: string };
+      if (data?.kind !== 'turn-finished') return;
+      announceTurn(settings, { sessionId: data.sessionId, host: data.host });
+    });
+    return () => sub.remove();
+  }, [settings]);
 
   if (!fontsLoaded || !settings) return null;
 

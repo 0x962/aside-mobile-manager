@@ -97,6 +97,67 @@ function saveTokens() {
   fs.writeFileSync(STATE_FILE, JSON.stringify({ ...rest, tokens }, null, 2), { mode: 0o600 });
 }
 
+// ---------------------------------------------------------------------------
+// Devices to wake when a turn finishes.
+//
+// The push carries no content. It asks the delivery service to wake the phone
+// and nothing else; the phone then reads the session from this bridge, on the
+// user's own network. Session text never reaches a third party, and this
+// machine holds no push credentials: Expo's service signs for APNs.
+// ---------------------------------------------------------------------------
+
+const PUSH_ENDPOINT = process.env.MINIBRIDGE_PUSH_URL ?? 'https://exp.host/--/api/v2/push/send';
+
+function loadDevices() {
+  try {
+    return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')).devices ?? [];
+  } catch {
+    return [];
+  }
+}
+
+let devices = loadDevices();
+
+function saveDevices() {
+  fs.mkdirSync(STATE_DIR, { recursive: true });
+  let rest = {};
+  try {
+    const { devices: _old, ...others } = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    rest = others;
+  } catch {}
+  fs.writeFileSync(STATE_FILE, JSON.stringify({ ...rest, devices }, null, 2), { mode: 0o600 });
+}
+
+async function wakeDevices(sessionId) {
+  if (!devices.length) return;
+  const messages = devices.map((d) => ({
+    to: d.pushToken,
+    // Content-free on purpose: the phone fetches the detail from here.
+    _contentAvailable: true,
+    priority: 'high',
+    data: { kind: 'turn-finished', sessionId, host: os.hostname().replace(/\.local$/, '') },
+  }));
+  try {
+    const res = await fetch(PUSH_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(messages),
+    });
+    const body = await res.json().catch(() => ({}));
+    const errors = (body.data ?? []).filter((r) => r.status === 'error');
+    for (const e of errors) {
+      // A phone that uninstalled the app should stop being pushed to.
+      if (e.details?.error === 'DeviceNotRegistered') {
+        devices = devices.filter((d) => !e.message?.includes(d.pushToken));
+        saveDevices();
+      }
+    }
+    console.log(`woke ${messages.length - errors.length}/${messages.length} device(s) for ${sessionId ?? 'a turn'}`);
+  } catch (err) {
+    console.error(`could not reach the push service: ${err.message}`);
+  }
+}
+
 function tokenOf(req, url) {
   const header = req.headers.authorization ?? '';
   if (header.startsWith('Bearer ')) return header.slice(7).trim();
@@ -182,16 +243,38 @@ function createProc({ argv, cwd, env, cols, rows }) {
     trimBuffer(p);
     const msg = JSON.stringify({ type: 'data', dataB64: chunk.toString('base64') });
     for (const ws of p.sockets) ws.send(msg);
+    // An interactive CLI redraws this prompt when a turn ends. The first one
+    // is the process coming up, not a finished turn.
+    if (chunk.includes(PROMPT)) {
+      if (p.sawPrompt) turnFinished(p);
+      p.sawPrompt = true;
+    }
   });
   term.onExit(({ exitCode, signal }) => {
     p.exitedAt = Date.now();
     p.exitCode = exitCode;
     const msg = JSON.stringify({ type: 'exit', code: exitCode, signal: signal ?? null });
     for (const ws of p.sockets) ws.send(msg);
+    if (exitCode === 0) turnFinished(p);
     setTimeout(() => procs.delete(id), KEEP_EXITED_MS).unref();
   });
   procs.set(id, p);
   return p;
+}
+
+// The prompt an interactive CLI redraws when it finishes a turn.
+const PROMPT = Buffer.from('\x1b[0J> ');
+
+function sessionOf(argv) {
+  const i = argv.indexOf('--session');
+  return i >= 0 ? argv[i + 1] : null;
+}
+
+function turnFinished(p) {
+  // A turn that took no time is a process starting, not work worth waking for.
+  if (Date.now() - (p.lastTurnAt ?? p.startedAt) < 1500) return;
+  p.lastTurnAt = Date.now();
+  wakeDevices(sessionOf(p.argv));
 }
 
 function procSummary(p) {
@@ -298,6 +381,20 @@ async function handle(req, res) {
     return respond(401, { error: 'not paired', hint: 'POST /pair, then scan the code shown on the host screen' });
   }
 
+  if (req.method === 'POST' && url.pathname === '/devices') {
+    if (!body.pushToken) return respond(400, { error: 'pushToken required' });
+    devices = devices.filter((d) => d.pushToken !== body.pushToken);
+    devices.push({ pushToken: body.pushToken, platform: body.platform ?? 'ios', addedAt: Date.now() });
+    saveDevices();
+    console.log(`device registered for wake-ups (${devices.length} total)`);
+    return respond(200, { ok: true, devices: devices.length });
+  }
+  if (req.method === 'DELETE' && url.pathname === '/devices') {
+    const before = devices.length;
+    devices = devices.filter((d) => d.pushToken !== url.searchParams.get('pushToken'));
+    saveDevices();
+    return respond(200, { ok: true, removed: before - devices.length });
+  }
   if (req.method === 'POST' && url.pathname === '/run') {
     if (!Array.isArray(body.argv) || body.argv.length === 0) return respond(400, { error: 'argv required' });
     return runOnce(body, respond);

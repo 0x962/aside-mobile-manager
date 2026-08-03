@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { ComputerList, PairingFlow } from '@/components/computer-list';
 import { LegalSection } from '@/components/legal';
 import { T } from '@/components/text';
 import { C, F, S } from '@/constants/theme';
 import { Aside } from '@/lib/aside';
 import { DEMO_HOST } from '@/lib/demo';
+import { registerDevice, registerForPush } from '@/lib/notify';
 import { useSettings } from '@/lib/settings';
 
 export default function SettingsScreen() {
@@ -15,6 +16,24 @@ export default function SettingsScreen() {
   const aside = useMemo(() => new Aside(settings), [settings]);
   const [check, setCheck] = useState<string | null>(null);
   const [pairing, setPairing] = useState(false);
+  const [notifyBusy, setNotifyBusy] = useState(false);
+  const [notifyError, setNotifyError] = useState<string | null>(null);
+
+  const toggleNotify = async (on: boolean) => {
+    setNotifyError(null);
+    if (!on) return update({ notifyOnFinish: false });
+    setNotifyBusy(true);
+    try {
+      const pushToken = await registerForPush();
+      if (!pushToken) throw new Error('notifications are turned off for this app, or this is a simulator');
+      await registerDevice(settings, pushToken);
+      update({ notifyOnFinish: true });
+    } catch (e) {
+      setNotifyError(String(e instanceof Error ? e.message : e).slice(0, 160));
+    } finally {
+      setNotifyBusy(false);
+    }
+  };
 
   const test = async () => {
     setCheck('Checking…');
@@ -71,6 +90,33 @@ export default function SettingsScreen() {
           entry in ~/.minibridge/state.json there.
         </T>
       )}
+
+      <View style={styles.section}>
+        <T variant="label">Notifications</T>
+        <View style={styles.row}>
+          <Ionicons name="notifications-outline" size={16} color={C.inkSecondary} />
+          <View style={{ flex: 1 }}>
+            <T variant="body">Tell me when a turn finishes</T>
+            <T variant="faint">
+              The computer wakes this phone with an empty signal. The text is read from the
+              computer itself, so no session content leaves your network.
+            </T>
+          </View>
+          {notifyBusy ? (
+            <ActivityIndicator size="small" color={C.inkSecondary} />
+          ) : (
+            <Switch
+              value={settings.notifyOnFinish}
+              onValueChange={toggleNotify}
+              disabled={settings.bridgeHost === DEMO_HOST || !settings.bridgeHost}
+            />
+          )}
+        </View>
+        {notifyError && <T variant="faint" style={{ color: C.error }}>{notifyError}</T>}
+        {settings.bridgeHost === DEMO_HOST && (
+          <T variant="faint">Connect a computer to turn this on.</T>
+        )}
+      </View>
 
       <Field
         label="Aside binary"

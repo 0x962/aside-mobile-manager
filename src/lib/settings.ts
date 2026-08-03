@@ -22,6 +22,8 @@ export type Settings = {
   asideHome: string;
   account: number;
   introSeen: boolean;
+  // Off until the phone has a push token and a computer has accepted it.
+  notifyOnFinish: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   asideHome: '',
   account: 0,
   introSeen: false,
+  notifyOnFinish: false,
 };
 
 const KEY = 'settings.v1';
