@@ -14,6 +14,10 @@ The code carries the addresses this machine answers on, so the phone connects wi
 
 Tokens live in `~/.minibridge/state.json`; delete an entry to revoke a device.
 
+### Notifications
+
+A paired phone can ask to be woken when a turn finishes. The bridge detects the end of a turn itself, by process exit or by the interactive prompt returning, and asks the push service to wake the phone. That signal carries no session content: the phone reads the title and the reply from this bridge afterwards, over your own network. Registered devices live in `~/.minibridge/state.json` under `devices`; delete an entry to stop waking a phone.
+
 ## Install
 
 With Homebrew:
@@ -62,6 +66,7 @@ The bridge binds loopback, real network interfaces carrying a private address, a
 MINIBRIDGE_HOSTS=100.x.y.z minibridge serve
 ```
 
+- `POST /devices` - register a phone to wake when a turn finishes. Body: `{pushToken, platform?}`. The bridge then sends a content-free wake-up through the push service; it holds no push credentials and sends no session text. `DELETE /devices?pushToken=` removes one.
 - `GET /health` - liveness, process count, hostname, and whether the caller's token is paired. No token needed.
 - `POST /pair` - show a pairing QR code on this machine's screen. Body: `{label?}`. Returns `{expiresInMs}`. No token needed.
 
